@@ -11,3 +11,53 @@ https://www.figma.com/
 
 
 
+REACT do zero
+=============
+
+- Criar pasta frontend
+- Acessar essa nova pasta
+- Criar o arquivo package.json
+    yarn init -y
+- Instalar React e React Dom
+    yarn add react react-dom
+- Criar o arquivo index.html em ./public
+    <!DOCTYPE html>
+    <html lang="pt-br">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>ReactJS</title>
+    </head>
+    <body>
+        <div id="app"></div>
+    </body>
+    </html>
+- Precisamos do Babel e Webpack
+    Babel: Converte (transpila) código do react para um código que o browser entenda
+    Webpack: Converte cada arquivo (.js, .css, .png) de maneira diferente
+        Loaders: babel-loader, css-loader, image-loader, file-loader
+            babel-loader: converte JS para que o browser entenda
+            css-loader: converte CSS para que o browser entenda
+            image-loader:  converte imagens para que o browser entenda
+    - Instalação
+        yarn add @babel/core @babel/preset-env @babel/preset-react webpack webpack-cli
+- Criar um arquivo babel.config.js na raiz do frontend
+    No site do Babel (babeljs.io) em Docs -> Configure Babel -> babel.config.json existem diversas configs
+    Por enquanto criaremos somente os presets que são config de terceiros. Configuração padrão:
+        module.exports = {
+            presets: [
+                '@babel/preset-env',
+                '@babel/preset-react'
+            ],
+        }
+        @babel/preset-env: converte JS mais atual para o mais antigo se o browser não entender, env = ambiente
+        @babel/preset-react: adiciona funcionalidades do React nessa conversão
+- Instalar @babel/cli para interface de linha de comando
+    yarn add @babel/cli
+- Criar index.js em ./src
+    const soma = (a, b) => {
+        return a + b;
+    }
+    console.log(soma(1, 3));
+- Configurar o arquivo bundle.js para converter o index.js nesse out-file, assim os browsers conseguem entender
+    yarn babel src/index.js --out-file public/bundle.js
