@@ -234,3 +234,291 @@ PROPRIEDADES
             </header>
         );
         }
+
+
+ESTADO E IMUTABILIDADE
+======================
+
+O react observa o estado das variáveis e atualiza na página.
+Não podemos alterar diretamente o valor das varáveis e sim seus estados (imutabilidade)
+Utilizamos o useState que retorna um array com 2 posições e recebe um valor inicial:
+    1. Variável com o seu valor inicial
+    2. Função para atualizarmos esse valor
+    Normalmente se inicializa um valor do mesmo tipo de variável que o estado seguirá depois
+    Exemplo com valor inicial sendo um array com dois itens:
+          const [projects, setProjects] = useState(['Desenvolvimento de app', 'Front-end web']);
+          projects: o próprio array
+          setProjects: função que irá atualizar o estado de projects
+- Importe { useState } de 'react'
+- Declare o array com o valor e a função recebendo um valor inicial
+- Crie uma função para ser executada chamando a função que atualiza o valor (setProjects)
+- O button chamará handleAddProject toda vez que for clicado que por sua vez chama setProjects
+- setProjects cria um novo array recebendo projects com spread operator (...projects) e insere um 'Novo projeto'
+  Dessa forma projects não será alterado, o contrário de push que tentaria alterar o array que é imutável 
+- A <ul> será incrementada com as <li> contendo uma key (padrão React como um ID) e os itens de projects
+    Em App.js:
+        import React, { useState } from 'react';
+        import Header from './components/Header';
+
+        export default function App() {
+            const [projects, setProjects] = useState(['Desenvolvimento de app', 'Front-end web']);
+
+            function handleAddProject() {
+                setProjects([...projects, `Novo projeto ${Date.now()}`]);
+            }
+
+            return (
+                <>
+                    <Header title="Projects" />
+                    <button type="button" onClick={handleAddProject}>Adicionar projeto</button>
+                    <ul>
+                        {projects.map(project => <li key={project}>{project}</li>)}
+                    </ul>
+                </>
+            )
+        }
+
+
+ESTILOS
+=======
+
+- Instalar os pacotes
+    yarn add style-loader css-loader
+- Incluir uma nova regra para o css em webpack.config.js
+    module: {
+        rules: [
+            {
+                test: /\.js$/,
+                exclude: /node_modules/,
+                use: {
+                    loader: 'babel-loader',
+                }
+            },
+            {
+                test: /\.css$/,
+                exclude: /node_modules/,
+                use: [
+                    { loader: 'style-loader' },
+                    { loader: 'css-loader' },
+                ]
+            }
+        ]
+    }
+
+    css-loader: lê as importações que tem dentro dos arquivos css como imagens, background com url, etc
+    style-loader: pega o css interpretado pelo css-loader e injeta dentro do HTML
+
+- Crie um arquivo App.css na raiz ./frontend
+    * {
+        margin: 0;
+        padding: 0;
+        outline: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        background: #f5f5f5;
+        font: 14px sans-serif;
+        color: #333;
+    }
+- Importe App.css em App.js
+    import './App.css';
+
+
+SCRIPTS EM PACKAGE.json
+=======================
+    {
+        "name": "frontend",
+        "version": "1.0.0",
+        "main": "index.js",
+        "license": "MIT",
+        "scripts": {
+            "dev": "webpack-dev-server --mode development",
+            "build": "webpack --mode production"
+        },
+        "dependencies": {
+            código abaixo omitido ...
+
+    scripts: dev para desenvolvimento e build para produção
+
+
+CARREGAR ARQUIVOS NA APP
+========================
+- Instalar File Loader
+    yarn add file-loader
+- Configurar no webpack.config.js
+    ... código acima omitido
+    {
+        test: /.*\.(gif|png|jpe?g)$/i,
+        use: {
+            loader: 'file-loader',
+        }
+    }
+
+    Na regex colocamos o i no final para ser case sensitive (maiúsculas e minúsculas)
+
+- Crie uma pasta assets com uma imagem qualquer dentro de ./src chamada background (pode ser jpg, png, etc)
+- Importe essa imagem em App.js
+    import backgroundImage from './assets/background.jpg'
+- Insira a tag <img> dentro do return de App.js
+    <img width={500} src={backgroundImage} alt="Onça pintada"/><br />
+  Em App.js:
+    import React, { useState } from 'react';
+    import Header from './components/Header';
+    import './App.css';
+    import backgroundImage from './assets/background.jpg';
+
+    export default function App() {
+        const [projects, setProjects] = useState(['Desenvolvimento de app', 'Front-end web']);
+
+        function handleAddProject() {
+            setProjects([...projects, `Novo projeto ${Date.now()}`]);
+        }
+
+        return (
+            <>
+            <Header title="Projects" />
+            <img width={500} src={backgroundImage} alt="Onça pintada"/><br />
+            <button type="button" onClick={handleAddProject}>Adicionar projeto</button>
+            <ul>
+                {projects.map(project => <li key={project}>{project}</li>)}
+            </ul>
+            </>
+        )
+    }
+
+
+CONECTANDO FRONT-END COM BACK-END
+=================================
+- Instalar CORS em ../backend para que seja possível o acesso externo à API
+    yarn add cors
+- Importar cors em index.js em ../backend
+    const cors = require('cors');
+- Declarar o uso de cors em index.js logo após a criação da instância de app
+    app.use(cors());    // dessa forma aceita requisição de qualquer URL
+    Para especificar uma URL que pode acessar a API:
+        app.use(cors({
+            origin: 'http://localhost:3000'
+        }));
+
+    Em index.js:
+    const express = require('express');
+    const cors = require('cors');
+    const { uuid, isUuid } = require('uuidv4');
+
+    const app = express();
+    app.use(cors());
+
+    app.use(express.json());
+
+    const projects = [];
+    código abaixo omitido ...
+
+- Instalar AXIOS para fazer as chamadas à API de back-end
+    yarn add axios
+- Inicie o servidor back-end
+    yarn dev
+- Crie alguns projetos com Insomnia por enquanto
+- Crie uma pasta services com um arquivo api.js em ./src
+    import axios from 'axios';
+
+    const api = axios.create({
+        baseURL: "http://localhost:3333"
+    })
+
+    export default api;
+- Importe useEffect para disparar funções que tiver alguma informação alterada ou
+  assim que o componente for exibido em tela
+  Sintaxe:
+    useEffect(() => {}, []);
+    () => {}: qual função quer disparar
+    []: quando disparar a função, vazio para executar uma vez (assim que o componente for exibido em tela)
+    Se fosse para disparar a função toda vez que projects fosse alterado, seria assim [projects]
+- Acesse a API através de useEffect
+- Inicialize o useState com um array vazio
+- Como receberá um objeto da API será necessário alterar as variáveis que serão mostradas na <ul>
+Em App.js:
+    import React, { useState, useEffect } from 'react';
+    import Header from './components/Header';
+    import './App.css';
+    import api from './services/api';
+
+    export default function App() {
+        const [projects, setProjects] = useState([]);
+
+        useEffect(() => {
+            api.get('projects').then(response => {
+            setProjects(response.data);
+            })
+        }, []);
+
+        function handleAddProject() {
+            setProjects([...projects, `Novo projeto ${Date.now()}`]);
+        }
+
+        return (
+            <>
+            <Header title="Projects" />
+            <button type="button" onClick={handleAddProject}>Adicionar projeto</button>
+            <ul>
+                {projects.map(project => <li key={project.id}>{project.title}</li>)}
+            </ul>
+            </>
+        )
+    }
+
+    Por enquanto não é possível adicionar novos projetos pelo front-end porque não criamos
+
+- Instalar plugin para babel entender as requisições com async
+    yarn add @babel/plugin-transform-runtime -D
+- Configurar o plugin em babel.config.js
+    module.exports = {
+        presets: [
+            '@babel/preset-env',
+            '@babel/preset-react'
+        ],
+        plugins: [
+            '@babel/plugin-transform-runtime'
+        ]
+    };
+
+Em App.js:
+- Altere handleAddProject para usar async/await
+- Crie uma variável response para receber o retorno de api.post passando dados estáticos para testar
+- Crie outra variável project para receber apenas o data da API
+- Atualize projects usando o setProjects copiando o array projects e adicionando o novo project
+    import React, { useState, useEffect } from 'react';
+    import Header from './components/Header';
+    import './App.css';
+    import api from './services/api';
+
+    export default function App() {
+        const [projects, setProjects] = useState([]);
+
+        useEffect(() => {
+            api.get('projects').then(response => {
+            setProjects(response.data);
+            })
+        }, []);
+
+        async function handleAddProject() {
+            const response = await api.post('projects', {
+            title: `Novo projeto ${Date.now()}`,
+            owner: 'Amauri'
+            });
+
+            const project = response.data;
+
+            setProjects([...projects, project]);
+        }
+
+        return (
+            <>
+            <Header title="Projects" />
+            <button type="button" onClick={handleAddProject}>Adicionar projeto</button>
+            <ul>
+                {projects.map(project => <li key={project.id}>{project.title}</li>)}
+            </ul>
+            </>
+        )
+    }
