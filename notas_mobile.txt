@@ -1,0 +1,185 @@
+- Instruções para configuração do Android Studio em:
+    https://react-native.rocketseat.dev/
+- Escolha o sistema operacional e siga as instruções
+- Criar o app
+  Na raiz da pasta rocketseat-gostack (ao lado de backend e frontend) criar o app mobile
+    npx react-native init mobile
+    Quando vc usa npx ele baixa a última versão do cli e usa para criar o projeto, em tempo de execução, 
+    se vc usar react-native init etc, ele pega o cli da sua máquina local que pode estar desatualizada.
+- Rodar o projeto
+    yarn android
+    Se não rodar ou apresentar erro no metro bundle, inicie primeiro com:
+      yarn start
+
+METRO BUNDLE
+  Como o webpack. Monitora os arquivos e cria o arquivo bundle.js para os navegadores
+
+- Apague o App.js
+- Crie a pasta src com o arquivo index.js em mobile/ 
+  import React from 'react';
+  import { View, Text, StyleSheet } from 'react-native';
+
+  export default function App() {
+    return <View />;
+  }
+- Altere a importação em mobile/index.js para importar src/index:
+  import App from './src';
+
+DIFERENÇA DOS COMPONENTES ENTRE REACT E REACT NATIVE
+====================================================
+
+No React Native os componentes:
+  - Não possuem valor semântico (significado)
+  - Não possuem estilização própria
+  - Todos os componentes possuem por padrão "display: flex"
+
+  View: div, footer, header, aside, section, main
+  Text: p, span, strong, h1, h2, h3
+
+CSS NO REACT NATIVE
+===================
+
+A parte do CSS é feita dentro do JS.
+Usamos o StyleSheet. O style seria como se fosse id ou className.
+  import React from 'react';
+  import { View, Text, StyleSheet } from 'react-native';
+
+  export default function App() {
+    return <View style={styles.container} />;
+  }
+
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: '#7159c1',
+    },
+  });
+
+  flex: 1 => ocupa a tela toda
+
+
+INTEGRANDO COM A API
+====================
+
+- Instalar AXIOS
+  yarn add axios 
+- Criar pasta services com api.js em ./mobile
+  import axios from 'axios';
+
+  const api = axios.create({
+    baseURL: *** EXPLICADO ABAIXO ***
+  });
+
+  export default api;
+
+  baseURL: Várias opções
+  - iOS com Emulador: localhost
+  - iOS com dispositivo físico: IP do computador
+  - Android com Emulador: localhost (adb reverse)
+    No terminal usamos o comando adb:
+      adb reverse tcp:3333 tcp:3333
+    Para direcionar a porta do computador para o emulador
+  - Android com Emulador: 10.0.2.2 (Android Studio)
+  - Android com Emulador: 10.0.3.2 (Genymotion)
+  - Android com dispositivo físico: IP do computador
+
+ROLAR TELA PARA BAIXO (SCROLL)
+==============================
+
+Podemos usar o ScrollView no lugar da View. Mas especificamente para lista devemos usar FlatList.
+
+Sem FlatList:
+  import React, { useState, useEffect } from 'react';
+  import { View, Text, StyleSheet, StatusBar } from 'react-native';
+  import api from './services/api';
+
+  export default function App() {
+    const [projects, setProjects] = useState([]);
+
+    useEffect(() => {
+      api.get('projects').then(response => {
+        setProjects(response.data);
+      });
+    }, []);
+    return (
+      <>
+        <StatusBar barStyle="light-content" backgroundColor="#7159c1" />
+        <View style={styles.container}>
+          {projects.map(project => (
+          <Text key={project.id} style={styles.project}>{project.title}</Text>
+          ))}
+        </View>
+      </>
+    )
+  }
+
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: '#7159c1',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+
+    project: {
+      color: '#FFF',
+      fontSize: 120,
+    }
+  });
+
+Com FlatList:
+  import React, { useState, useEffect } from 'react';
+import { View, SafeAreaView, Text, StyleSheet, StatusBar, FlatList } from 'react-native';
+import api from './services/api';
+
+export default function App() {
+  const [projects, setProjects] = useState([]);
+
+  useEffect(() => {
+    api.get('projects').then(response => {
+      setProjects(response.data);
+    });
+  }, []);
+  return (
+    <>
+      <StatusBar barStyle="light-content" backgroundColor="#7159c1" />
+      <SafeAreaView style={styles.container}>
+        <FlatList
+          // style passa para safeAreaView
+          // style={styles.container}
+          data={projects}
+          keyExtractor={project => project.id}
+          renderItem={({ item: project }) => (
+            <Text key={project.id} style={styles.project}>{project.title}</Text>
+          )}
+        />
+      </SafeAreaView>
+      {/* Para usar FlatList */}
+      {/* <View style={styles.container}>
+        {projects.map(project => (
+        <Text key={project.id} style={styles.project}>{project.title}</Text>
+        ))}
+      </View> */}
+    </>
+  )
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#7159c1',
+    // Para usar FlatList
+    // justifyContent: 'center',
+    // alignItems: 'center',
+  },
+
+  project: {
+    color: '#FFF',
+    fontSize: 32,
+  }
+});
+
+FlatList tem uma performance melhor para as listas do que a ScrollView.
+Só mostra em tela tudo que está visível, não renderiza o resto.
+SafeAreaView é a área segura do que serámostrado em tela.
+TouchableOpacity é um botão com opacidade.

@@ -10,6 +10,12 @@ Design
 https://www.figma.com/
 
 
+NODE
+====
+
+- Instalar UUID
+    yarn add uuidv4
+
 
 REACT do zero
 =============
