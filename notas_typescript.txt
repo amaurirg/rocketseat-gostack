@@ -1,0 +1,178 @@
+Typescript é baseado em Java Script e contém algumas funcionalidades a mais.
+Quando estamos desenvolvendo colocamos informações para que outros desenvolvedores consigam entender melhor como um autocomplete IntelliSense.
+
+- Configurando o projeto:
+  - Criar pasta typescript ao lado de backend, frontend, mobile, etc...:
+    - Criar pasta src e dentro o arquivo index.ts (ts mesmo)
+  - Criar node_modules, package.json, etc:
+    yarn init -y
+  - Instalar o Typescript. Converteremos o código Typescript em JS em desenvolvimento (-D).
+    yarn add typescript -D
+  - Instalar Express:
+    yarn add express
+OBS: Sempre que instalar uma ferramenta e que no import fique com três pontinhos (...) é sinal que devemos instalar o pacote para que tenha o autocomplete. Sintaxe: yarn add @types/NOME_DO_PACOTE:
+  - Instalar pacote Express para Typescript:
+      yarn add -D @types/express
+OBS: Precisamos converter o arquivo ts em js pois não conseguiremos executar "node src/index.ts".
+  - Executando o binário tsc (node_modules/bin) do typescript
+    yarn tsc src/index.ts
+Dessa forma irá gerar um erro porque não inicializamos o arquivo de configurações tsconfig.json.
+  - Criar o arquivo tsconfig.json:
+      yarn tsc --init
+  - Configurar o arquivo tsconfig.json:
+      Descomente essa linha e acrescente o nome do diretório para dist (sugestão)
+        "outDir": "./dist",                /* Redirect output structure to the directory. */
+  - Convertendo arquivo ts em js:
+      yarn tsc
+      Será criado o arquivo index.js dentro de dist.
+      Esse diretório dist segue a mesma estrutura de src. Tudo que fizermos em ts e convertermos com "yarn tsc" em um será criado em js.
+  - Executando o projeto:
+    node src/index.js
+    Poderá ser acessado em: http://localhost:3333/
+Quando utilizar tipagem no código:
+  Quando importamos uma lib como express dentro do mesmo arquivo o autocomplete já sabe que o request faz parte do express mas se fosse em um outro arquivo não teríamos esse autocomplete porque não foi informado de onde é o request por exemplo. Nesse caso o editor já nos ajuda a sabermos que é necessário informarmos que o request vem do Request. Se pressionarmos CTRL e clicarmos em cima de express seremos direcionados para o arquivo index.d.ts onde terá as definições de tipos das variáveis como request, response, listen, get, post, etc.
+  Exemplo:
+    - Arquivo index.ts:
+      import express from 'express';
+
+      const app = express();
+
+      app.get('/', (request, response) => {
+        return response.json({message: 'Hello World!'});
+      });
+
+      app.listen(3333);
+
+    - Modificando:
+      - Criamos um arquivo dentro de src chamado routes.ts:
+        import { Request, Response } from 'express';
+
+        export function helloWorld(request: Request, response: Response) {
+          return response.json({message: "Hello World"});
+        }
+      
+      - Alteramos index.ts:
+        import express from 'express';
+        import { helloWorld } from './routes';
+
+        const app = express();
+
+        app.get('/', helloWorld);
+
+        app.listen(3333);
+
+    Dessa forma informamos "request: Request" para que o código saiba de onde vem request.
+- Criando nossas próprias tipagens:
+  - Crie uma pasta services com o arquivo CretaeUser.ts dentro de src.
+    export default function createUser(name = '', email: string, password: string) {
+      const user = {
+        name,
+        email, 
+        password
+      }
+      return user;
+    }
+
+- Em routes.ts:
+  - importamos a função createUser:
+    import createUser from './services/CreateUser';
+- Dentro da função helloWorld vamos passar os dados do usuário. Temos várias opções:
+  const user = createUser('Amauri', 'amauri@gmail.com', '12345');
+  Caso os dados passados não sejam do mesmo tipo que a função deve receber, gera erro no editor.
+  Uma forma mais correta de fazer é criando uma interface em CreateUser.ts.
+  Interfaces são formas de definição de tipagem de conjunto de dados, principalmente objetos JS:
+    interface CreateUserData {
+      name?: string,
+      email: string,
+      password: string
+    }
+
+    export default function createUser({name = '', email, password}: CreateUserData) {
+      const user = {
+        name,
+        email, 
+        password
+      }
+      return user;
+    }
+
+    name? significa que o nome será opcional.
+
+    Com desestruturação:
+      export default function createUser({name = '', email, password}: CreateUserData) {...
+      Para a desestruturação o editor já reconhece os parâmetros com CTRL + espaço
+    Sem desestruturação:
+      export default function createUser(data: CreateUserData) {...
+
+- Passando mais de um tipo como parâmetro, exemplo um Array:
+  Em routes.ts:
+    import { Request, Response } from 'express';
+    import createUser from './services/CreateUser';
+
+    export function helloWorld(request: Request, response: Response) {
+      const user = createUser({
+        email: 'amauri@gmail.com', 
+        password: '12345',
+        techs: ['Node.js','React', 'React Native']
+      });
+      return response.json({message: "Hello World"});
+    }
+
+  Em CreateUser:
+    interface CreateUserData {
+    name?: string,
+    email: string,
+    password: string,
+    techs: Array<string>;
+  }
+
+  export default function createUser({name = '', email, password}: CreateUserData) {
+    const user = {
+      name,
+      email, 
+      password
+    }
+    return user;
+  }
+
+  Passando um objeto dentro do Array:
+    Em routes.ts:
+      import { Request, Response } from 'express';
+      import createUser from './services/CreateUser';
+
+      export function helloWorld(request: Request, response: Response) {
+        const user = createUser({
+          email: 'amauri@gmail.com',
+          password: '12345',
+          techs: ['Node.js', 'React', 'React Native', { title: 'Javascript', experience: 100 }]
+        });
+        return response.json({ message: "Hello World" });
+      }
+
+    Em CreateUser:
+      interface TechObject {
+        title: string,
+        experience: number
+      }
+
+      interface CreateUserData {
+        name?: string,
+        email: string,
+        password: string,
+        techs: Array<string | TechObject>;
+      }
+
+      export default function createUser({name = '', email, password}: CreateUserData) {
+        const user = {
+          name,
+          email, 
+          password
+        }
+        return user;
+      }
+    
+    Se fosse um Array de string poderia ser assim:
+      techs: string[];
+
+Para saber mais:
+  https://www.notion.so/Typescript-5712aeab312d44fcba0aa88895caad36

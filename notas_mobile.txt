@@ -1,3 +1,27 @@
+REACT NATIVE
+============
+
+Arquitetura:
+  ############################################################
+  #                                                          #
+  #  JS => METRO BUNDLER => BUNDLE => BRIDGE => ANDROID/IOS  #
+  #                                                          #
+  ############################################################
+  
+  - JS: Arquivos Java Script
+  - Metro Bundler: Monitora e pega os JS e gera o arquivo bundle.js, como o "WEBPACK"
+  - Bundle: o arquivo gerado bundle.js pelo metro bundler
+  - Bridge: é a ponte de comunicação entre o JS e o código nativo
+  - Android/iOS: a bridge/ponte transforma o que precisa para essas interfaces
+
+
+Sintaxe:
+  - A declaração é igual ao web
+  - Não usamos HTML e sim componentes próprios
+  - Aplicamos estilo sem clases ou IDs
+  - Todo texto é <Text/>, não existe estilização própria
+
+
 - Instruções para configuração do Android Studio em:
     https://react-native.rocketseat.dev/
 - Escolha o sistema operacional e siga as instruções
@@ -10,6 +34,8 @@
     yarn android
     Se não rodar ou apresentar erro no metro bundle, inicie primeiro com:
       yarn start
+      Quando terminar de rodar, execute em outra aba do terminal:
+        yarn android
 
 METRO BUNDLE
   Como o webpack. Monitora os arquivos e cria o arquivo bundle.js para os navegadores
@@ -33,6 +59,7 @@ No React Native os componentes:
   - Não possuem estilização própria
   - Todos os componentes possuem por padrão "display: flex"
 
+  Semântico ou significado: um footer é um rodapé, um p é um parágrafo
   View: div, footer, header, aside, section, main
   Text: p, span, strong, h1, h2, h3
 
@@ -181,5 +208,7 @@ const styles = StyleSheet.create({
 
 FlatList tem uma performance melhor para as listas do que a ScrollView.
 Só mostra em tela tudo que está visível, não renderiza o resto.
-SafeAreaView é a área segura do que serámostrado em tela.
-TouchableOpacity é um botão com opacidade.
+SafeAreaView é a área segura do que será mostrado em tela.
+TouchableOpacity é um botão com opacidade. Colocar <Text> para o nome do botão pq ele aceita outras coisas.
+keyExtractor qual a key para os itens, uma função pega o id de cada project em data
+renderItem é como um map que itera sobre data e retorna cada item.

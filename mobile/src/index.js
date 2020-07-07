@@ -30,7 +30,7 @@ export default function App() {
           data={projects}
           keyExtractor={project => project.id}
           renderItem={({ item: project }) => (
-            <Text key={project.id} style={styles.project}>{project.title}</Text>
+            <Text style={styles.project}>{project.title}</Text>
           )}
         />
         <TouchableOpacity
