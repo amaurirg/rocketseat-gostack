@@ -2,10 +2,10 @@ Typescript é baseado em Java Script e contém algumas funcionalidades a mais.
 Quando estamos desenvolvendo colocamos informações para que outros desenvolvedores consigam entender melhor como um autocomplete IntelliSense.
 
 - Configurando o projeto:
-  - Criar pasta typescript ao lado de backend, frontend, mobile, etc...:
-    - Criar pasta src e dentro o arquivo index.ts (ts mesmo)
   - Criar node_modules, package.json, etc:
     yarn init -y
+  - Criar pasta typescript ao lado de backend, frontend, mobile, etc...:
+    - Criar pasta src e dentro o arquivo index.ts (ts mesmo)
   - Instalar o Typescript. Converteremos o código Typescript em JS em desenvolvimento (-D).
     yarn add typescript -D
   - Instalar Express:

@@ -1,0 +1,107 @@
+- Criar pasta primeiro-pojeto-node
+- Criar package.json:
+  yarn init -y
+- Instalar as dependências:
+  yarn add express
+  yarn tsc --init
+- Criar pasta src com arquivo server.ts
+    import express from 'express';
+
+    const app = express();
+
+    app.get('/', (request, response) => {
+      return response.json({message: 'Hello World'});
+    })
+
+    app.listen(3333, () => {
+      console.log('Server started on port 3333');
+    });
+- Em tsconfig.json descomente e preencha com as pastas:
+    "outDir": "./dist",
+    "rootDir": "./src",
+- Converta os arquivos ts em js:
+  yarn tsc
+- Em server.ts:
+  import express from 'express';
+  Ficará com erro informando que precisamos instalar o pacote:
+    yarn add @types/express -D
+- Execute o projeto:
+  yarn tsc
+  node dist/server.js
+Para não ter que fazer esses procedimentos instalaremos uma ferramenta que é muito rápida e fará o build (como o tsc) e restart do servidor automaticamente (como o nodemon).
+- Configurar package.json:
+  ... omitido
+    "license": "MIT",
+    "scripts": {
+      "build": "tsc"
+    },
+    "dependencies": {
+  ... omitido
+- Deletar a pasta dist.
+- Instalar o pacote:
+  yarn add ts-node-dev -D
+- Inclua "dev-server" em package.json:
+    ... omitido
+    "license": "MIT",
+      "scripts": {
+        "build": "tsc",
+        "dev-server": "ts-node-dev --transpileOnly --ignore-watch node_modules src/server.ts"
+      },
+      "dependencies": {
+      ... omitido
+    --transpileOnly: para não verificar se o código está correto já que o VSCode faz isso
+    --ignore-watch node_modules: para ignorar a verificação de alteração na pasta node_modules
+- Execute o projeto:
+    yarn dev:server
+
+DEBUG NO VSCODE
+===============
+- Clicar no ícone DEBUG
+- Clicar em create a launch.json file
+    {
+      // Use IntelliSense to learn about possible attributes.
+      // Hover to view descriptions of existing attributes.
+      // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+      "version": "0.2.0",
+      "configurations": [
+        {
+          "type": "node",
+          "request": "launch",
+          "name": "Launch Program",
+          "skipFiles": [
+            "<node_internals>/**"
+          ],
+          "program": "${workspaceFolder}/index.js",
+          "outFiles": [
+            "${workspaceFolder}/**/*.js"
+          ]
+        }
+      ]
+    }
+- Alterar o arquivo launch.json:
+    {
+      // Use IntelliSense to learn about possible attributes.
+      // Hover to view descriptions of existing attributes.
+      // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+      "version": "0.2.0",
+      "configurations": [
+        {
+          "type": "node",
+          "request": "attach",
+          "protocol": "inspector",
+          "restart": true,
+          "name": "Debug",
+          "skipFiles": [
+            "<node_internals>/**"
+          ],
+          "outFiles": [
+            "${workspaceFolder}/**/*.js"
+          ]
+        }
+      ]
+    }
+    O launch só executa a aplicação com o debug. O attach tenta conectar o debug na aplicação.
+- Execute o projeto:
+    yarn dev:server
+    Se tentar debugar agora não irá funcionar porque o debug não está conectado. O protocol inspector serve para essa conexão e tem que especificar --inspect no package.json:
+      "dev:server": "ts-node-dev --inspect --transpileOnly --ignore-watch node_modules src/server.ts"
