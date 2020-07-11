@@ -105,3 +105,117 @@ DEBUG NO VSCODE
     yarn dev:server
     Se tentar debugar agora não irá funcionar porque o debug não está conectado. O protocol inspector serve para essa conexão e tem que especificar --inspect no package.json:
       "dev:server": "ts-node-dev --inspect --transpileOnly --ignore-watch node_modules src/server.ts"
+- Execute o projeto:
+    yarn dev:server
+  - Clique Run Debug
+    A barra abaixo ficará vermelha, o terminal informará que o debugger está ouvindo e poderemos usar breakpoints.
+  
+
+  ROUTES
+  ======
+
+  - Vamos dividir as rotas em arquivos separados.
+    - Crie um arquivo src/routes/appointments.routes.ts:
+      import { Router } from 'express';
+      import { uuid } from 'uuidv4';
+
+      const appointmentsRouter = Router();
+
+      const appointments = [];
+
+      appointmentsRouter.post('/', (request, response) => {
+          const { provider, date } = request.body;
+          const appointment = {
+              id: uuid(),
+              provider,
+              date
+          }
+          appointments.push(appointment)
+          return response.json(appointment);
+      });
+
+      export default appointmentsRouter;
+    
+    - Em src/routes/index.ts:
+      import { Router } from 'express';
+      import appointmentsRouter from './appointments.routes';
+
+      const routes = Router();
+
+      routes.use('/appointments', appointmentsRouter);
+
+      export default routes;
+    
+    Usamos "use" informando onde deverá ser tratada a rota para qualquer método (post, get, etc.).
+    Em appointments.routes.ts criamos um array que recebe os dados de request.body através de appointment.
+    Por enquanto não temos validação de nada, podendo ser adicionado vários com o mesmo horário.
+
+
+- Instalar DATE FNS para trabalharmos com datas
+    yarn add date-fns
+- Importe DATE FNS em appointments.routes.ts:
+    import { startOfHour, parseISO } from 'date-fns';
+      parseISO converte uma string em objeto date
+      startOfHour zera os minutos, segundos e milisegundos, deixando a hora no formato T20:00:00.000Z
+- Declare a variável no formato convertido:
+    const parsedDate = startOfHour(parseISO(date));
+- Na criação do objeto colocaremos essa data:
+    const appointment = {
+        id: uuid(),
+        provider,
+        date: parsedDate
+    }
+- Vamos procurar agendamentos com a mesma data:
+    - Importe isEqual para comparar as datas:
+        import { startOfHour, parseISO, isEqual } from 'date-fns';
+- Percorre o array fazendo a comparação se existe alguma data igual ao que recebemos em request.body:
+    const findAppointmentInSameDate = appointments.find(appointment =>
+        isEqual(parsedDate, appointment.date),
+    );
+- Se tiver uma data igual retornaremos um erro:
+    if(findAppointmentInSameDate) {
+        return response.status(400).json({message: "This appointment is already booked"});
+    }
+- Precisamos criar uma interface para appointments:
+    interface Appointment {
+        id: string,
+        provider: string,
+        date: Date;
+    }
+- Declare que esse array é composto pela interface criada:
+    const appointments: Appointment[] = [];
+
+
+
+MODELS
+======
+Toda vez que criarmos um dado que será armazenado na aplicação, criaremos um model.
+- Crie o arquivo src/models/Appointments.ts
+    import { uuid } from 'uuidv4';
+
+    class Appointment {
+        id: string;
+        provider: string;
+        date: Date;
+
+        constructor(provider: string, date: Date) {
+            this.id = uuid();
+            this.provider = provider;
+            this.date = date;
+        }
+    }
+
+    export default Appointment;
+- Agora apagamos a interface e importamos o model em appointments.routes.ts:
+    import Appointment from '../models/Appointments';
+    A declaração da variável fica igual:
+      const appointments: Appointment[] = [];
+- Substituir a forma de como criamos o objeto:
+    const appointment = {
+        id: uuid(),
+        provider,
+        date: parsedDate
+    }
+    PARA:
+    const appointment = new Appointment(provider, parsedDate);
+- Não precisamos mais de uuid em appointments.routes.ts pois isso é feito agora em models
