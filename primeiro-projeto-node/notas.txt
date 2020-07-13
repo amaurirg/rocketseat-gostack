@@ -411,3 +411,69 @@ Assim quando quisermos adicionar algum campo na classe, o mesmo ficará disponí
       public create({ provider, date }: CreateAppointmentDTO): Appointment {
         const appointment = new Appointment({ provider, date });
 
+
+
+SERVICES & SOLID
+================
+
+Precisamos separar o código de acordo com as responsabilidades pois as rotas estão sobrecarregadas com códigos não devem estar nelas.
+As rotas são responsáveis por:
+  - Receber a requisição
+  - Chamar outro arquivo
+  - Devolver uma resposta
+O que estiver além disso deve ser colocado em outra parte do código.
+- Crie uma pasta services em src
+Para a criação de agendamento criaremos um arquivo separado e moveremos parte do código de appointments.routes.ts para ele
+- Crie o arquivo CreateAppointmentService.ts
+O service sempre terá um único método normalmente chamado de execute ou run
+
+- Em appointments.routes.ts:
+  - Separando parseISO que está transformando string em objeto de startOfHour que é uma regra de negócio onde zera os minutos, segundos e milisegundos.
+      const parsedDate = startOfHour(parseISO(date));
+    Em:
+      const parsedDate = parseISO(date);
+      const appointmentDate = startOfHour(parsedDate);
+    Agora precisamos alterar a variável que tem o valor de date:
+      const appointment = appointmentsRepository.create({
+        provider,
+        date: appointmentDate,
+      });
+  - Movemos essa parte do código para src/services/CreateAppointmentService.ts:
+      const appointmentDate = startOfHour(parsedDate);
+      const findAppointmentInSameDate = appointmentsRepository.findByDate(
+          parsedDate,
+      );
+
+      if (findAppointmentInSameDate) {
+          return response.status(400).json({ message: "This appointment is already booked" });
+      }
+      
+      const appointment = appointmentsRepository.create({
+          provider,
+          date: appointmentDate,
+      });
+Agora teremos vários erros que precisamos corrigir.
+  - Recebimento das informações
+  - Tratativa de erros e excessões
+  - Acesso ao repositório
+- Criamos uma interface:
+
+- Informamos com desestruturação os dados que receberemos e o tipo do retorno:
+    public execute({ date, provider }: Request): Appointment {
+- Substituiremos o if para retornar um trow com a mensagem de erro:
+    if (findAppointmentInSameDate) {
+      return response.status(400).json({ message: "This appointment is already booked" });
+    }
+  Para:
+    if (findAppointmentInSameDate) {
+      throw Error("This appointment is already booked");
+    }
+Se fizermos a declaração abaixo em cada criaremos repositórios diferentes:
+  const appointmentsRepository = new AppointmentsRepository();
+Para isso utilizaremos um princípio chamado Dependency Inversion (SOLID).
+Sempre o service tiver uma dependência externa como o caso do AppointmentsRepository ao invés de instanciarmos a classe de repositório dentro do service nós receberemos o appointmentsRepository como parâmetro do constructor da classe. Isso facilita para que independentemente de quantos servicesw diferentes estejam trabalhando com a parte de appointment todos eles estejam utilizando o mesmo repositório de appointment e não vários criados em services diferentes.
+- Importamos:
+    import AppointmentsRepository from '../repositories/AppointmentsRepository';
+- Em constructor:
+    - Criamos a variável:
+        constructor(appointmentsRepository: AppointmentsRepository){
