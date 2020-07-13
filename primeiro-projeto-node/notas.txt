@@ -355,3 +355,59 @@ Com essas mudanças os arquivos ficaram assim:
 
     export default AppointmentsRepository;
 
+
+
+DTO - Data Transfer Object
+==========================
+
+Passando dados nomeados para ficar mais claro o que a função recebe.
+Ao invés de passarmos/recebermos parâmetros indicando os tipos na função, criamos uma interface e desestruturamos os dados. Exemplo:
+  - Em AppointmentsRepository.ts:
+      - Criação da interface:
+          interface CreateAppointmentDTO {
+            provider: string;
+
+            date: Date;
+          }
+      - Substituímos:      
+          public create(provider: string, date: Date): Appointment {...
+        Por:
+          public create(data: CreateAppointmentDTO): Appointment {
+            const appointment = new Appointment(data.provider, data.date);
+        Ou com desestruturação:
+          public create({ provider, date }: CreateAppointmentDTO): Appointment {
+            const appointment = new Appointment(provider, date);
+  - Em appointments.routes.ts passaremos na criação um objeto como parâmetro:
+    - Substituímos:
+        const appointment = appointmentsRepository.create(provider, parsedDate);
+      Por:
+        const appointment = appointmentsRepository.create({
+          provider,
+          date: parsedDate,
+        });
+
+No Typescript existe uma função que serve para NÃO pegarmos alguns dados. 
+  Omit<Tipo, variável que não queremos>
+  - No constructor de Appointments colocaremos o Omit com o tipo Appointment e a variável que não queremos (id):
+      import { uuid } from 'uuidv4';
+
+      class Appointment {
+          id: string;
+          provider: string;
+          date: Date;
+
+          constructor({ provider, date }: Omit<Appointment, "id">) {
+              this.id = uuid();
+              this.provider = provider;
+              this.date = date;
+          }
+      }
+
+      export default Appointment;
+
+Assim quando quisermos adicionar algum campo na classe, o mesmo ficará disponível para o constructor com CTRL + espaço.
+
+  - No método create de AppointmentsRepository:
+      public create({ provider, date }: CreateAppointmentDTO): Appointment {
+        const appointment = new Appointment({ provider, date });
+
