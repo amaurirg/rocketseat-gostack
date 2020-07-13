@@ -26,8 +26,8 @@
   Ficará com erro informando que precisamos instalar o pacote:
     yarn add @types/express -D
 - Execute o projeto:
-  yarn tsc
-  node dist/server.js
+    yarn tsc
+    node dist/server.js
 Para não ter que fazer esses procedimentos instalaremos uma ferramenta que é muito rápida e fará o build (como o tsc) e restart do servidor automaticamente (como o nodemon).
 - Configurar package.json:
   ... omitido
@@ -45,7 +45,7 @@ Para não ter que fazer esses procedimentos instalaremos uma ferramenta que é m
     "license": "MIT",
       "scripts": {
         "build": "tsc",
-        "dev-server": "ts-node-dev --transpileOnly --ignore-watch node_modules src/server.ts"
+        "dev:server": "ts-node-dev --transpileOnly --ignore-watch node_modules src/server.ts"
       },
       "dependencies": {
       ... omitido
@@ -190,7 +190,7 @@ DEBUG NO VSCODE
 MODELS
 ======
 Toda vez que criarmos um dado que será armazenado na aplicação, criaremos um model.
-- Crie o arquivo src/models/Appointments.ts
+- Crie o arquivo src/models/Appointment.ts
     import { uuid } from 'uuidv4';
 
     class Appointment {
@@ -206,6 +206,8 @@ Toda vez que criarmos um dado que será armazenado na aplicação, criaremos um 
     }
 
     export default Appointment;
+    constructor: para passarmos parâmetros em "new Appointment()"
+    
 - Agora apagamos a interface e importamos o model em appointments.routes.ts:
     import Appointment from '../models/Appointments';
     A declaração da variável fica igual:
@@ -219,3 +221,137 @@ Toda vez que criarmos um dado que será armazenado na aplicação, criaremos um 
     PARA:
     const appointment = new Appointment(provider, parsedDate);
 - Não precisamos mais de uuid em appointments.routes.ts pois isso é feito agora em models
+
+
+
+REPOSITÓRIOS
+============
+
+Responsável pelo CRUD.
+É a conexão entre Persistência (onde iremos persistir os dados como DB), Repositório e Rota.
+Persistência <-> Repositório <-> Rota
+É um detentor das operações que iremos fazer em cima dos dados da aplicação.
+Sempre que formos armazenar dados, os repositórios serão utilizados para realizarmos as operações em cima deles (CRUD).
+No repositório iremos buscar as informações persistidas em um DB ou variável.
+Podemos ter um find para procurar ou create para criar.
+Normalmente teremos um repositório por model.
+- Crie o arquivo src/repositories/AppointmentsRepository.ts que será responsável por tudo que irá mexer nos dados de agendamento de alguma forma:
+    import Appointment from '../models/Appointment';
+
+
+    class AppointmentsRepository {
+        private appointments: Appointment[];
+
+        constructor() {
+            this.appointments = [];
+        }
+
+        public create(provider: string, date: Date): Appointment {
+            const appointment = new Appointment(provider, date);
+            this.appointments.push(appointment);
+
+            return appointment;
+        }
+    }
+
+    export default AppointmentsRepository;
+
+private: acessível somente pela classe e seus métodos
+public: acessível fora da classe
+constructor: inicializa a variável
+create(): cria o objeto e adiciona em appointments
+public create(provider: string, date: Date): Appointment { ==> precisamos informar o tipo de retorno (Appointment)
+
+- Em appointments.routes.ts:
+  - Importamos
+      import AppointmentsRepository from '../repositories/AppointmentsRepository';
+  - Criamos a instância appointmentsRepository de AppointmentsRepository:
+      - Substituir:
+          const appointments: Appointment[] = [];
+        Por:
+          const appointmentsRepository = new AppointmentsRepository();
+  - Chamamos o método create para criarmos o objeto:
+      const appointment = appointmentsRepository.create(provider, parsedDate);
+  - Deletamos o push porque será feito no AppointmentsRepository.ts
+  - Precisamos criar um método público para procurar pelos agendamentos em AppointmentsRepository.ts porque appointments não é acessível (private)
+
+- Em AppointmentsRepository.ts:
+    Passaremos a lógica de appointments.routes.ts para dentro do método findByDate:
+      const findAppointmentInSameDate = appointments.find(appointment =>
+          isEqual(parsedDate, appointment.date),
+      );
+    E faremos as alterações necessárias:
+      public findByDate(date: Date): Appointment | null {
+        const findAppointment = this.appointments.find(appointment =>
+            isEqual(date, appointment.date),
+        );
+        return findAppointment || null;
+      }
+      Informamos que retornará Appointment ou nulo
+        public findByDate(date: Date): Appointment | null
+      Retornará findAppointment ou nulo
+        return findAppointment || null;
+
+- Em appointments.routes.ts:
+    - Chamamos o método findByDate passando a data:
+        const findAppointmentInSameDate = appointmentsRepository.findByDate(
+          parsedDate,
+        );
+    - A verificação com "if" continua igual.
+
+Com essas mudanças os arquivos ficaram assim:
+
+- Em appointments.routes.ts:
+    import { Router } from 'express';
+    import { startOfHour, parseISO, isEqual } from 'date-fns';
+    import AppointmentsRepository from '../repositories/AppointmentsRepository';
+
+    const appointmentsRouter = Router();
+    const appointmentsRepository = new AppointmentsRepository();
+
+    appointmentsRouter.post('/', (request, response) => {
+        const { provider, date } = request.body;
+        const parsedDate = startOfHour(parseISO(date));
+        const findAppointmentInSameDate = appointmentsRepository.findByDate(
+            parsedDate,
+        );
+
+        if (findAppointmentInSameDate) {
+            return response.status(400).json({ message: "This appointment is already booked" });
+        }
+        
+        const appointment = appointmentsRepository.create(provider, parsedDate);
+        return response.json(appointment);
+    });
+
+    export default appointmentsRouter;
+
+- Em AppointmentsRepository.ts:
+    import Appointment from '../models/Appointment';
+    import { isEqual } from 'date-fns/esm';
+
+
+    class AppointmentsRepository {
+        private appointments: Appointment[];
+
+        constructor() {
+            this.appointments = [];
+        }
+
+        public findByDate(date: Date): Appointment | null {
+            const findAppointment = this.appointments.find(appointment =>
+                isEqual(date, appointment.date),
+            );
+            return findAppointment || null;
+        }
+
+        public create(provider: string, date: Date): Appointment {
+            const appointment = new Appointment(provider, date);
+            this.appointments.push(appointment);
+
+            return appointment;
+        }
+    }
+
+    export default AppointmentsRepository;
+
