@@ -416,6 +416,13 @@ Assim quando quisermos adicionar algum campo na classe, o mesmo ficará disponí
 SERVICES & SOLID
 ================
 
+SOLID:
+  - S ingle Responsability Principle
+  - O
+  - L
+  - I
+  - D ependency Inversion
+
 Precisamos separar o código de acordo com as responsabilidades pois as rotas estão sobrecarregadas com códigos não devem estar nelas.
 As rotas são responsáveis por:
   - Receber a requisição
@@ -456,8 +463,15 @@ Agora teremos vários erros que precisamos corrigir.
   - Recebimento das informações
   - Tratativa de erros e excessões
   - Acesso ao repositório
+- Retornamos appointment:
+    return appointment;
+- Exportamos a classe:
+    export default CreateAppointmentService;
 - Criamos uma interface:
-
+    interface Request {
+      provider: string;
+      date: Date;
+    }
 - Informamos com desestruturação os dados que receberemos e o tipo do retorno:
     public execute({ date, provider }: Request): Appointment {
 - Substituiremos o if para retornar um trow com a mensagem de erro:
@@ -468,12 +482,162 @@ Agora teremos vários erros que precisamos corrigir.
     if (findAppointmentInSameDate) {
       throw Error("This appointment is already booked");
     }
+
+Dependency Inversion (SOLID)
+============================
 Se fizermos a declaração abaixo em cada criaremos repositórios diferentes:
   const appointmentsRepository = new AppointmentsRepository();
 Para isso utilizaremos um princípio chamado Dependency Inversion (SOLID).
-Sempre o service tiver uma dependência externa como o caso do AppointmentsRepository ao invés de instanciarmos a classe de repositório dentro do service nós receberemos o appointmentsRepository como parâmetro do constructor da classe. Isso facilita para que independentemente de quantos servicesw diferentes estejam trabalhando com a parte de appointment todos eles estejam utilizando o mesmo repositório de appointment e não vários criados em services diferentes.
-- Importamos:
+Sempre o service tiver uma dependência externa como o caso do AppointmentsRepository ao invés de instanciarmos a classe de repositório dentro do service nós receberemos o appointmentsRepository como parâmetro do constructor da classe. Isso facilita para que independentemente de quantos services diferentes estejam trabalhando com a parte de appointment todos eles estejam utilizando o mesmo repositório de appointment e não vários criados em services diferentes.
+- Importamos appointmentsRepository para informar o tipo AppointmentsRepository:
     import AppointmentsRepository from '../repositories/AppointmentsRepository';
+    Serve para quando o parâmetro seja uma instância de uma outra classe.
 - Em constructor:
-    - Criamos a variável:
+    - Recebemos o repositório através da variável appointmentsRepository:
         constructor(appointmentsRepository: AppointmentsRepository){
+- Criamos uma variável privada:
+    private appointmentsRepository: AppointmentsRepository;
+- Alteramos appointmentsRepository para this.appointmentsRepository.
+- Alteramos parsedDate para appointmentDate.
+- Importamos startOfHour:
+    import { startOfHour } from 'date-fns';
+Por mais que tenhamos criado o constructor temos que passar esse parâmetro em appointments.routes.ts.
+- Em appointments.routes.ts:
+  Importamos CreateAppointmentService:
+    import CreateAppointment from '../services/CreateAppointmentService';
+- Criamos as variáveis abaixo para criar o repositório e passar os parâmetros:
+    const createAppointment = new CreateAppointmentService(
+      appointmentsRepository,
+    );
+    const appointment = createAppointment.execute({date: parsedDate, provider});
+- Colocamos o trecho de código abaixo dentro de um try/catch:
+    const { provider, date } = request.body;
+    const parsedDate = parseISO(date);
+    const createAppointment = new CreateAppointmentService(
+        appointmentsRepository,
+    );
+    const appointment = createAppointment.execute({date: parsedDate, provider});
+    
+    return response.json(appointment);
+
+
+Agora os arquivos ficaram assim:
+================================
+
+- Em src/services/CreateAppointmentService.ts:
+    // Responsável pela criação de agendamento
+    import Appointment from '../models/Appointment';
+    import AppointmentsRepository from '../repositories/AppointmentsRepository';
+    import { startOfHour } from 'date-fns';
+
+    interface Request {
+      provider: string;
+      date: Date;
+    }
+
+    class CreateAppointmentService {
+      private appointmentsRepository: AppointmentsRepository;
+      constructor(appointmentsRepository: AppointmentsRepository){
+        this.appointmentsRepository = appointmentsRepository; 
+      }
+      public execute({ date, provider }: Request): Appointment {
+        const appointmentDate = startOfHour(date);
+        const findAppointmentInSameDate = this.appointmentsRepository.findByDate(
+          appointmentDate,
+        );
+
+        if (findAppointmentInSameDate) {
+          throw Error("This appointment is already booked");
+        }
+
+        const appointment = this.appointmentsRepository.create({
+          provider,
+          date: appointmentDate,
+        });
+        return appointment;
+      }
+    }
+
+    export default CreateAppointmentService;
+
+- Em src/repositories/AppointmentsRepository.ts:
+    import { isEqual } from 'date-fns';
+    import Appointment from '../models/Appointment';
+
+    interface CreateAppointmentDTO {
+        provider: string;
+
+        date: Date;
+    }
+
+    class AppointmentsRepository {
+        private appointments: Appointment[];
+
+        constructor() {
+            this.appointments = [];
+        }
+
+        public all(): Appointment[] | null {
+            return this.appointments;
+        }
+
+        public findByDate(date: Date): Appointment | null {
+            const findAppointment = this.appointments.find(appointment =>
+                isEqual(date, appointment.date),
+            );
+
+            return findAppointment || null;
+        }
+
+        public create({ provider, date }: CreateAppointmentDTO): Appointment {
+            const appointment = new Appointment({ provider, date });
+
+            this.appointments.push(appointment);
+
+            return appointment;
+        }
+    }
+
+    export default AppointmentsRepository;
+
+- Em src/routes/appointments.routes.ts:
+    import { Router } from 'express';
+    import { parseISO } from 'date-fns';
+    import AppointmentsRepository from '../repositories/AppointmentsRepository';
+    import CreateAppointment from '../services/CreateAppointmentService';
+    import CreateAppointmentService from '../services/CreateAppointmentService';
+
+    const appointmentsRouter = Router();
+    const appointmentsRepository = new AppointmentsRepository();
+
+    appointmentsRouter.get('/', (request, response) => {
+        const appointments = appointmentsRepository.all();
+        return response.json(appointments);
+    });
+
+    appointmentsRouter.post('/', (request, response) => {
+        try {
+            const { provider, date } = request.body;
+        const parsedDate = parseISO(date);
+        const createAppointment = new CreateAppointmentService(
+            appointmentsRepository,
+        );
+        const appointment = createAppointment.execute({date: parsedDate, provider});
+        
+        return response.json(appointment);
+        } catch (err) {
+            return response.status(400).json({error: err.message});
+        }
+    });
+
+    export default appointmentsRouter;
+
+Recapitulando o que foi feito:
+- Separamos da rota o que é regra de negócio de transformação de dados.
+    Transformação de dados fica em rotas.
+    Regras de negócio ficam em services.
+- Dentro de services:
+    - Criamos o execute que é o único método de service que recebe "date e provider".
+    - Fez todos os passos para verificação se a data está disponível.
+    - Cria e retorna o agendamento criado se não houver erro.
+Toda vez que formos criar um agendamento será através de services por mais que seja simples pois futuramente poderá ser necessário criar outros services.
