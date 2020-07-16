@@ -3,7 +3,10 @@
   yarn init -y
 - Instalar as dependências:
   yarn add express
-  yarn tsc --init
+- Instalar o Typescript. Converteremos o código Typescript em JS em desenvolvimento (-D):
+    yarn add typescript -D
+- Gerar o arquivo tsconfig.json que armazenará as configurações de como o Typescript será executado no projeto.
+    yarn tsc --init
 - Criar pasta src com arquivo server.ts
     import express from 'express';
 
@@ -114,6 +117,22 @@ DEBUG NO VSCODE
   ROUTES
   ======
 
+  - Crie src/routes/index.ts:
+      import { Router } from 'express';
+      import appointmentsRouter from './appointments.routes';
+
+      const routes = Router();
+
+      routes.use('/appointments', appointmentsRouter);
+
+      export default routes;
+    
+    Usamos "use" informando onde deverá ser tratada a rota para qualquer método (post, get, etc.).
+    Em appointments.routes.ts criamos um array que recebe os dados de request.body através de appointment.
+    Por enquanto não temos validação de nada, podendo ser adicionado vários com o mesmo horário.
+    
+  - Instalar UUID
+      yarn add uuidv4
   - Vamos dividir as rotas em arquivos separados.
     - Crie um arquivo src/routes/appointments.routes.ts:
       import { Router } from 'express';
@@ -136,55 +155,59 @@ DEBUG NO VSCODE
 
       export default appointmentsRouter;
     
-    - Em src/routes/index.ts:
-      import { Router } from 'express';
-      import appointmentsRouter from './appointments.routes';
+Informando o tipo para appointments:
+  - Como appointments está com tipo any, precisamos criar uma interface:
+      interface Appointment {
+          id: string,
+          provider: string,
+          date: Date;
+      }
+  - Declare que esse array é composto pela interface criada:
+      const appointments: Appointment[] = [];
 
-      const routes = Router();
+    - Em server.ts:
+      importamos routes para declarar em "app.use(routes)"
+        import express, { response } from 'express';
+        import routes from './routes/appointments.routes';
 
-      routes.use('/appointments', appointmentsRouter);
+        const app = express();
 
-      export default routes;
+        app.use(express.json());
+        app.use(routes);
+
+        app.listen(3333, () => {
+          console.log("Server started on port 3333");
+        })
+
     
-    Usamos "use" informando onde deverá ser tratada a rota para qualquer método (post, get, etc.).
-    Em appointments.routes.ts criamos um array que recebe os dados de request.body através de appointment.
-    Por enquanto não temos validação de nada, podendo ser adicionado vários com o mesmo horário.
 
-
-- Instalar DATE FNS para trabalharmos com datas
-    yarn add date-fns
-- Importe DATE FNS em appointments.routes.ts:
-    import { startOfHour, parseISO } from 'date-fns';
-      parseISO converte uma string em objeto date
-      startOfHour zera os minutos, segundos e milisegundos, deixando a hora no formato T20:00:00.000Z
-- Declare a variável no formato convertido:
-    const parsedDate = startOfHour(parseISO(date));
-- Na criação do objeto colocaremos essa data:
-    const appointment = {
-        id: uuid(),
-        provider,
-        date: parsedDate
-    }
-- Vamos procurar agendamentos com a mesma data:
-    - Importe isEqual para comparar as datas:
-        import { startOfHour, parseISO, isEqual } from 'date-fns';
-- Percorre o array fazendo a comparação se existe alguma data igual ao que recebemos em request.body:
-    const findAppointmentInSameDate = appointments.find(appointment =>
-        isEqual(parsedDate, appointment.date),
-    );
-- Se tiver uma data igual retornaremos um erro:
-    if(findAppointmentInSameDate) {
-        return response.status(400).json({message: "This appointment is already booked"});
-    }
-- Precisamos criar uma interface para appointments:
-    interface Appointment {
-        id: string,
-        provider: string,
-        date: Date;
-    }
-- Declare que esse array é composto pela interface criada:
-    const appointments: Appointment[] = [];
-
+VALIDAÇÃO DE DATAS
+==================    
+  - Instalar DATE FNS para trabalharmos com datas
+      yarn add date-fns
+  - Importe DATE FNS em appointments.routes.ts:
+      import { startOfHour, parseISO } from 'date-fns';
+        parseISO converte uma string em objeto date
+        startOfHour zera os minutos, segundos e milisegundos, deixando a hora no formato T20:00:00.000Z
+  - Declare a variável no formato convertido:
+      const parsedDate = startOfHour(parseISO(date));
+  - Na criação do objeto colocaremos essa data:
+      const appointment = {
+          id: uuid(),
+          provider,
+          date: parsedDate
+      }
+  - Vamos procurar agendamentos com a mesma data:
+      - Importe isEqual para comparar as datas:
+          import { startOfHour, parseISO, isEqual } from 'date-fns';
+  - Percorre o array fazendo a comparação se existe alguma data igual ao que recebemos em request.body:
+      const findAppointmentInSameDate = appointments.find(appointment =>
+          isEqual(parsedDate, appointment.date),
+      );
+  - Se tiver uma data igual retornaremos um erro:
+      if(findAppointmentInSameDate) {
+          return response.status(400).json({message: "This appointment is already booked"});
+      }
 
 
 MODELS
@@ -206,9 +229,10 @@ Toda vez que criarmos um dado que será armazenado na aplicação, criaremos um 
     }
 
     export default Appointment;
-    constructor: para passarmos parâmetros em "new Appointment()"
+
+    constructor: para passarmos parâmetros em "new Appointment()" para criar o appointment já baseado em algumas informações pré existentes.
     
-- Agora apagamos a interface e importamos o model em appointments.routes.ts:
+- Em appointments.routes.ts apagamos a interface e importamos o model:
     import Appointment from '../models/Appointments';
     A declaração da variável fica igual:
       const appointments: Appointment[] = [];
@@ -228,16 +252,18 @@ REPOSITÓRIOS
 ============
 
 Responsável pelo CRUD.
-É a conexão entre Persistência (onde iremos persistir os dados como DB), Repositório e Rota.
+É a conexão entre Persistência (onde iremos persistir os dados como DB) e a Rota.
 Persistência <-> Repositório <-> Rota
 É um detentor das operações que iremos fazer em cima dos dados da aplicação.
 Sempre que formos armazenar dados, os repositórios serão utilizados para realizarmos as operações em cima deles (CRUD).
 No repositório iremos buscar as informações persistidas em um DB ou variável.
 Podemos ter um find para procurar ou create para criar.
 Normalmente teremos um repositório por model.
-- Crie o arquivo src/repositories/AppointmentsRepository.ts que será responsável por tudo que irá mexer nos dados de agendamento de alguma forma:
-    import Appointment from '../models/Appointment';
+Criaremos um arquivo que será responsável por tudo que irá mexer nos dados de agendamento de alguma forma. Por enquanto a lista de appointments que está em appointments.routes.ts é só uma variável mas futuramente o repositório será o responsável por fazer as operações do banco de dados.
 
+Vamos separar as responsabilidades e passar código de routes para o repositório.
+- Crie o arquivo src/repositories/AppointmentsRepository.ts com o método create:
+    import Appointment from '../models/Appointment';
 
     class AppointmentsRepository {
         private appointments: Appointment[];
@@ -261,6 +287,7 @@ public: acessível fora da classe
 constructor: inicializa a variável
 create(): cria o objeto e adiciona em appointments
 public create(provider: string, date: Date): Appointment { ==> precisamos informar o tipo de retorno (Appointment)
+O trecho "const appointment = new Appointment(provider, date);" foi movido de appointments.routes.ts
 
 - Em appointments.routes.ts:
   - Importamos
@@ -287,7 +314,7 @@ public create(provider: string, date: Date): Appointment { ==> precisamos inform
         );
         return findAppointment || null;
       }
-      Informamos que retornará Appointment ou nulo
+      Informamos o tipo que retornará: Appointment ou nulo
         public findByDate(date: Date): Appointment | null
       Retornará findAppointment ou nulo
         return findAppointment || null;
@@ -303,7 +330,7 @@ Com essas mudanças os arquivos ficaram assim:
 
 - Em appointments.routes.ts:
     import { Router } from 'express';
-    import { startOfHour, parseISO, isEqual } from 'date-fns';
+    import { startOfHour, parseISO } from 'date-fns';
     import AppointmentsRepository from '../repositories/AppointmentsRepository';
 
     const appointmentsRouter = Router();
@@ -328,7 +355,7 @@ Com essas mudanças os arquivos ficaram assim:
 
 - Em AppointmentsRepository.ts:
     import Appointment from '../models/Appointment';
-    import { isEqual } from 'date-fns/esm';
+    import { isEqual } from 'date-fns';
 
 
     class AppointmentsRepository {
@@ -355,7 +382,21 @@ Com essas mudanças os arquivos ficaram assim:
 
     export default AppointmentsRepository;
 
+Recapitulando:
+- Criamos um arquivo src/repositories/AppointmentsRepository.ts responsável por mexer nos dados de agendamento de alguma forma. Então armazenamos os agendamentos dentro dele e qualquer função que for llistar, criar, deletar, alterar deverá ficar aqui.
+- src/routes/appointments.routes.ts vai perdendo cada vez mais as responsabilidades de formato de dados (pertence ao model) e a maneira como os dados são armazenados. A rota não deve ter a responsabilidade de se conectar com a fonte de dados da aplicação e sim o repositório.
 
+
+Listando todos os agendamentos:
+- Em AppointmentsRepository.ts criamos o método all para get passando o tipo do retorno. Já que retorna appointments que é do tipo Appointment, informaremos esse tipo:
+    public all(): Appointment[] {
+      return this.appointments;
+    }
+- Em src/routes/appointments.routes.ts criaremos a rota do tipo get:
+    appointmentsRouter.get('/', (request, response) => {
+      const appointments = appointmentsRepository.all();
+      return response.json(appointments);
+    });
 
 DTO - Data Transfer Object
 ==========================
@@ -376,7 +417,7 @@ Ao invés de passarmos/recebermos parâmetros indicando os tipos na função, cr
             const appointment = new Appointment(data.provider, data.date);
         Ou com desestruturação:
           public create({ provider, date }: CreateAppointmentDTO): Appointment {
-            const appointment = new Appointment(provider, date);
+        const appointment = new Appointment({ provider, date });
   - Em appointments.routes.ts passaremos na criação um objeto como parâmetro:
     - Substituímos:
         const appointment = appointmentsRepository.create(provider, parsedDate);
@@ -423,16 +464,24 @@ SOLID:
   - I
   - D ependency Inversion
 
-Precisamos separar o código de acordo com as responsabilidades pois as rotas estão sobrecarregadas com códigos não devem estar nelas.
+Precisamos separar o código de acordo com as responsabilidades pois as rotas estão sobrecarregadas com códigos que não devem estar nelas. SOC: Separation od Concerns (Separação de preocupações)
 As rotas são responsáveis por:
   - Receber a requisição
   - Chamar outro arquivo
   - Devolver uma resposta
 O que estiver além disso deve ser colocado em outra parte do código.
+
 - Crie uma pasta services em src
 Para a criação de agendamento criaremos um arquivo separado e moveremos parte do código de appointments.routes.ts para ele
-- Crie o arquivo CreateAppointmentService.ts
-O service sempre terá um único método normalmente chamado de execute ou run
+- Crie o arquivo src/services/CreateAppointmentService.ts para armazenar as regras de negócio da aplicação.
+O service sempre terá um único método normalmente chamado de execute ou run. Seria como "estou executando a criação de um novo agendamento".
+  // Responsável pela criação de agendamento
+
+  class CreateAppointmentService {
+    public execute () {
+
+    }
+  }
 
 - Em appointments.routes.ts:
   - Separando parseISO que está transformando string em objeto de startOfHour que é uma regra de negócio onde zera os minutos, segundos e milisegundos.
@@ -445,7 +494,7 @@ O service sempre terá um único método normalmente chamado de execute ou run
         provider,
         date: appointmentDate,
       });
-  - Movemos essa parte do código para src/services/CreateAppointmentService.ts:
+  - Movemos essa parte do código para execute em src/services/CreateAppointmentService.ts:
       const appointmentDate = startOfHour(parsedDate);
       const findAppointmentInSameDate = appointmentsRepository.findByDate(
           parsedDate,
@@ -463,17 +512,28 @@ Agora teremos vários erros que precisamos corrigir.
   - Recebimento das informações
   - Tratativa de erros e excessões
   - Acesso ao repositório
+
 - Retornamos appointment:
     return appointment;
 - Exportamos a classe:
     export default CreateAppointmentService;
-- Criamos uma interface:
+
+Como execute() receberá os parâmetros como objeto, criaremos uma interface:
     interface Request {
       provider: string;
-      date: Date;
+      date: Data;
     }
+
 - Informamos com desestruturação os dados que receberemos e o tipo do retorno:
-    public execute({ date, provider }: Request): Appointment {
+    Precisamos importar Appointment:
+      import Appointment from '../models/Appointment';
+
+    class CreateAppointmentService {
+      public execute({ date, provider }: Request): Appointment {
+        ... código movido de routes ...
+      }
+    }
+
 - Substituiremos o if para retornar um trow com a mensagem de erro:
     if (findAppointmentInSameDate) {
       return response.status(400).json({ message: "This appointment is already booked" });
@@ -485,18 +545,21 @@ Agora teremos vários erros que precisamos corrigir.
 
 Dependency Inversion (SOLID)
 ============================
-Se fizermos a declaração abaixo em cada criaremos repositórios diferentes:
+Se fizermos a declaração abaixo em cada service criaremos repositórios diferentes:
   const appointmentsRepository = new AppointmentsRepository();
 Para isso utilizaremos um princípio chamado Dependency Inversion (SOLID).
-Sempre o service tiver uma dependência externa como o caso do AppointmentsRepository ao invés de instanciarmos a classe de repositório dentro do service nós receberemos o appointmentsRepository como parâmetro do constructor da classe. Isso facilita para que independentemente de quantos services diferentes estejam trabalhando com a parte de appointment todos eles estejam utilizando o mesmo repositório de appointment e não vários criados em services diferentes.
+Sempre que o service tiver uma dependência externa como o caso do AppointmentsRepository, ao invés de instanciarmos a classe de repositório dentro do service nós receberemos o appointmentsRepository como parâmetro do constructor da classe. Isso facilita para que independentemente de quantos services diferentes estejam trabalhando com a parte de appointment todos eles estejam utilizando o mesmo repositório de appointment e não vários criados em services diferentes.
 - Importamos appointmentsRepository para informar o tipo AppointmentsRepository:
     import AppointmentsRepository from '../repositories/AppointmentsRepository';
-    Serve para quando o parâmetro seja uma instância de uma outra classe.
+    Serve para quando o parâmetro for uma instância de uma outra classe.
 - Em constructor:
     - Recebemos o repositório através da variável appointmentsRepository:
         constructor(appointmentsRepository: AppointmentsRepository){
-- Criamos uma variável privada:
+- Criamos uma variável privada antes do constructor:
     private appointmentsRepository: AppointmentsRepository;
+    Inicializamos essa variável no constructor:
+      this.appointmentsRepository = appointmentsRepository;
+
 - Alteramos appointmentsRepository para this.appointmentsRepository.
 - Alteramos parsedDate para appointmentDate.
 - Importamos startOfHour:
@@ -616,21 +679,26 @@ Agora os arquivos ficaram assim:
     });
 
     appointmentsRouter.post('/', (request, response) => {
-        try {
-            const { provider, date } = request.body;
-        const parsedDate = parseISO(date);
-        const createAppointment = new CreateAppointmentService(
-            appointmentsRepository,
-        );
-        const appointment = createAppointment.execute({date: parsedDate, provider});
-        
-        return response.json(appointment);
-        } catch (err) {
-            return response.status(400).json({error: err.message});
-        }
+      try {
+          const { provider, date } = request.body;
+          const parsedDate = parseISO(date);
+          const createAppointment = new CreateAppointmentService(
+              appointmentsRepository,
+          );
+          const appointment = createAppointment.execute({date: parsedDate, provider});
+          
+          return response.json(appointment);
+      } catch (err) {
+          return response.status(400).json({error: err.message});
+      }
     });
 
     export default appointmentsRouter;
+
+    {error: err.message}:
+      - Error: classe global que possui message
+      - message: mensagem de trow em CreateAppointmentService
+
 
 Recapitulando o que foi feito:
 - Separamos da rota o que é regra de negócio de transformação de dados.
@@ -641,3 +709,111 @@ Recapitulando o que foi feito:
     - Fez todos os passos para verificação se a data está disponível.
     - Cria e retorna o agendamento criado se não houver erro.
 Toda vez que formos criar um agendamento será através de services por mais que seja simples pois futuramente poderá ser necessário criar outros services.
+
+
+Responsabilidades:
+==================
+
+ROTAS
+  As rotas são responsáveis por:
+    - Receber a requisição
+    - Chamar outro arquivo
+    - Devolver uma resposta
+
+MODELS
+  Os models são responsáveis pelo formato de como os dados serão armazenados.
+  
+
+REPOSITÓRIOS
+  Os repositórios são responsáveis pelas operações com os dados (CRUD) sempre que formos armazená-los.
+  É a conexão entre onde iremos persistir os dados (como um DB) e a Rota.
+
+SERVICES:
+  Os services são responsáveis pelas regras de negócio da aplicação.
+  Sempre tem uma única exclusiva funcionalidade/método como um execute ou run.
+  Exemplo: criação de algum objeto/elemento/item.
+
+
+
+DOCKER
+======
+- Instalação do Docker
+    curl -fsSL https://get.docker.com/ | sh
+    Dessa forma instalará sempre a última versão ou atualizará a sua.
+
+- Habilitar para que seu serviço seja iniciado automaticamente com o sistema
+    sudo systemctl status docker
+    sudo systemctl enable docker
+
+- Verificar se o Docker foi instalado da forma correta
+    docker version
+
+
+- Adicionando o usuário ao grupo Docker
+    sudo usermod -aG docker $(whoami)
+
+- Reinicie o computador para ter acesso ao Docker sem usar o sudo
+
+
+- Criando container postgres:
+    docker run --name gostack_postgres -e POSTGRES_PASSWORD=docker -p 5432:5432 -d postgres
+
+- Instalando TypeORM para trabalharmos com os comandos do postgres
+    Informações em: https://typeorm.io
+      Em Connection Options selecione o DB para ver como é a instalação do driver e as especificações dos campos que podemos utilizar no arquivo de configuração.
+      Em Working with Connection pode ser encontrado os drivers de acordo com o DB.
+      Aqui usaremos o postgres, então o comando abaixo instala o ORM e o driver do postgres:
+        yarn add typeorm pg
+      Em Using ormconfig.json tem as instruções de como criar o arquivo de configuração.
+- Crie o arquivo de configuração para o TypeORM em src/ormconfig.json.
+    {
+      "type": "postgres",
+      "host": "localhost",
+      "port": 5432,
+      "username": "docker",
+      "password": "docker",
+      "database": "gostack_gobarber"
+    }
+- Crie o o arquivo src/database/index.ts que irá chamar o ormconfig.json. Tanto esse arquivo quanto o cli do TypeORM lêem esse arquivo.
+    import { createConnection } from 'typeorm';
+
+    createConnection();
+
+- Importamos a conexão em src/server.ts:
+    import './database';
+
+Agora já é possível acessar o banco de dados, inclusive pelo DBeaver.
+
+
+MIGRATIONS
+==========
+
+- Crie a pasta src/migrations.
+- Configurando as migrations em ormconfig.json:
+    "migrations": [
+      "./src/database/migrations/*.ts"
+    ],
+    "cli": {
+      "migrationsDir": "./src/database/migrations"
+    }
+
+O TypeORM oferece suporte tanto para aplicações escritas em Typescript quanto em JS. Dessa forma, se rodarmos as migrations agora ele se perderá em qual formato criar. Para que ele interprete como Typescript, vamos configurar em package.json dentro de "scripts":
+  "typeorm": "ts-node-dev ./node_modules/typeorm/cli.js"
+- Execute o projeto:
+    yarn typeorm
+- Criando as migrations:
+    yarn typeorm migration:create -n CreateAppointments
+    -n: para indicar o nome da migration CreateAppointments
+    Será gerado um arquivo em src/database/migrations com as migrações. Devemos colocar as instruções dentro desse arquivo para um controle de versões do DB:
+      import {MigrationInterface, QueryRunner} from "typeorm";
+
+      export class CreateAppointments1594931787307 implements MigrationInterface {
+
+          public async up(queryRunner: QueryRunner): Promise<void> {
+          }
+
+          public async down(queryRunner: QueryRunner): Promise<void> {
+          }
+
+      }
+    Dentro de up serão as alterações e dentro de up é o reverso de up para que se der algo errado, possa retornar ao estado anterior.
