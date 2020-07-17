@@ -799,21 +799,126 @@ MIGRATIONS
 
 O TypeORM oferece suporte tanto para aplicações escritas em Typescript quanto em JS. Dessa forma, se rodarmos as migrations agora ele se perderá em qual formato criar. Para que ele interprete como Typescript, vamos configurar em package.json dentro de "scripts":
   "typeorm": "ts-node-dev ./node_modules/typeorm/cli.js"
-- Execute o projeto:
+- Execute o TypeORM:
     yarn typeorm
+
 - Criando as migrations:
     yarn typeorm migration:create -n CreateAppointments
     -n: para indicar o nome da migration CreateAppointments
-    Será gerado um arquivo em src/database/migrations com as migrações. Devemos colocar as instruções dentro desse arquivo para um controle de versões do DB:
-      import {MigrationInterface, QueryRunner} from "typeorm";
+    Será gerado um arquivo em src/database/migrations com as migrações. Devemos colocar as instruções dentro desse arquivo para um controle de versões do DB.
+- Arquivo padrão de migrations:
+    import {MigrationInterface, QueryRunner} from "typeorm";
 
-      export class CreateAppointments1594931787307 implements MigrationInterface {
+    export class CreateAppointments1594931787307 implements MigrationInterface {
 
-          public async up(queryRunner: QueryRunner): Promise<void> {
-          }
+        public async up(queryRunner: QueryRunner): Promise<void> {
+        }
 
-          public async down(queryRunner: QueryRunner): Promise<void> {
-          }
+        public async down(queryRunner: QueryRunner): Promise<void> {
+        }
 
-      }
-    Dentro de up serão as alterações e dentro de up é o reverso de up para que se der algo errado, possa retornar ao estado anterior.
+    }
+    Dentro de up são as alterações e dentro de down é o reverso de up para que se algo der errado, possa retornar ao estado anterior.
+- Arquivo com as modificações:
+    import {MigrationInterface, QueryRunner, Table} from "typeorm";
+
+    export class CreateAppointments1594931787307 implements MigrationInterface {
+
+        public async up(queryRunner: QueryRunner): Promise<void> {
+            await queryRunner.createTable(
+                new Table({
+                    name: 'appointments',
+                    columns: [
+                        {
+                            name: 'id',
+                            type: 'varchar',
+                            isPrimary: true,
+                            generationStrategy: 'uuid',
+                        },
+                        {
+                            name: 'provider',
+                            type: 'varchar',
+                            isNullable: false,
+                        },
+                        {
+                            name: 'date',
+                            type: 'timestamp with time zone',
+                            isNullable: false,
+                        }
+                    ]
+                })
+            )
+        }
+
+        public async down(queryRunner: QueryRunner): Promise<void> {
+            await queryRunner.dropTable('appointments');
+        }
+
+    }
+
+    queryRunner.createTable: comando para criar a tabela
+    new Table: cria uma nova tabela
+    name: 'appointments',: nome da tabela
+    columns: onde serão especificadas as colunas
+      name: nome da coluna
+      type: tipo de dado da coluna
+      isPrimary: chave primária
+      generationStrategy: método utilizado para geração do ID
+      isNullable: false não pode ser um campo nulo
+      type: 'timestamp with time zone': somente para Postgres. Além do horário salvará também o                                       fuso horário. Para outro DB é apenas timestamp.
+
+- Executando as migrations:
+    yarn typeorm migration:run
+  
+  Supondo que um tipo de campo foi criado em formato incorreto, o mesmo poderá ser corrigido por duas formas:
+    - Fazendo uma nova migration com outro nome
+    - Alterando no arquivo mas existem umas regras:
+      IMPORTANTE: Só pode alterar migration se ela não foi enviada para um sistema de controle de versão como o git ou enviada a alguém da equipe. Se já tiver sido enviada, obrigatoriamente você precisará criar uma nova migration com as alterações necessárias.
+      - Mostrando as migrations:
+          yarn typeorm migration:show
+      - Desfazendo uma migration:
+          yarn typeorm migration:revert
+      - Altere o arquivo e execute novamente a migration:
+          yarn typeorm migration:run
+
+
+RELACIONANDO A APLICAÇÃO COM O DB
+=================================
+
+
+- Vamos habilitar a funcionalidade do Typescript chamada  decorators que funcionam como funções. Assim podemos passar o decorator como parâmetro para enviar a classe.
+Fazemos a declaração do decorator logo acima da classe dessa forma: @Entity('nome_da_tabela')
+    - Em tsconfig.json descomentaremos as linhas
+      /* Experimental Options */
+      "experimentalDecorators": true,        /* Enables experimental support for ES7 decorators. */
+      "emitDecoratorMetadata": true,         /* Enables experimental support for emitting type metadata for decorators. */
+
+- Em src/models/Appointment.ts:
+    - Importamos Entity (um model que será salvo no DB):
+        import { Entity } from 'typeorm';
+
+    - Importamos Column e PrimaryGeneratedColumn para informar quais os tipos de cada coluna:
+        import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
+
+    - Em cima de cada coluna colocaremos os decorators:
+        import { uuid } from 'uuidv4';
+        import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
+
+        class Appointment {
+            @PrimaryGeneratedColumn('uuid')
+            id: string;
+
+            @Column()
+            provider: string;
+            
+            @Column('timestamp with time zone')
+            date: Date;
+        }
+
+        export default Appointment;
+
+    - Retiramos o import de uuid
+
+    - Retiramos o constructor pois não precisaremos mais dele já que o TypeORM gera automaticamente.
+        Isso gera erros no código porque as variáveis não foram inicializadas já que retiramos o constructor mas o TypeORM faz isso por debaixo dos panos. Para não ficar com esses erros no código precisamos desabilitar (descomentar e modificar) uma linha em tsconfig.json:
+          "strictPropertyInitialization": false,    /* Enable strict checking of property initialization in classes. */
