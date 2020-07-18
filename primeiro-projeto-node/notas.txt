@@ -820,6 +820,7 @@ O TypeORM oferece suporte tanto para aplicações escritas em Typescript quanto 
     }
     Dentro de up são as alterações e dentro de down é o reverso de up para que se algo der errado, possa retornar ao estado anterior.
 - Arquivo com as modificações:
+    DURANTE O CURSO FOI REALIZADA A MIGRATION E ENVIADA AO GITHUB E POR ISSO NÃO PUDE CORRIGIR ESSA MIGRATION PORQUE FALTOU O "default: 'uuid_generate_v4()'" MAS DEIXEI AQUI PARA FICAR CORRETO.
     import {MigrationInterface, QueryRunner, Table} from "typeorm";
 
     export class CreateAppointments1594931787307 implements MigrationInterface {
@@ -834,6 +835,7 @@ O TypeORM oferece suporte tanto para aplicações escritas em Typescript quanto 
                             type: 'varchar',
                             isPrimary: true,
                             generationStrategy: 'uuid',
+                            default: 'uuid_generate_v4()'
                         },
                         {
                             name: 'provider',
@@ -901,9 +903,9 @@ Fazemos a declaração do decorator logo acima da classe dessa forma: @Entity('n
         import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
 
     - Em cima de cada coluna colocaremos os decorators:
-        import { uuid } from 'uuidv4';
         import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
 
+        @Entity('appointments')
         class Appointment {
             @PrimaryGeneratedColumn('uuid')
             id: string;
@@ -922,3 +924,83 @@ Fazemos a declaração do decorator logo acima da classe dessa forma: @Entity('n
     - Retiramos o constructor pois não precisaremos mais dele já que o TypeORM gera automaticamente.
         Isso gera erros no código porque as variáveis não foram inicializadas já que retiramos o constructor mas o TypeORM faz isso por debaixo dos panos. Para não ficar com esses erros no código precisamos desabilitar (descomentar e modificar) uma linha em tsconfig.json:
           "strictPropertyInitialization": false,    /* Enable strict checking of property initialization in classes. */
+
+Salvando, listando, entre outras operações com o DB
+  O TypeORM já tem por padrão um repositório com os métodos (CRUD) entre outros
+- Em src/repositories/AppointmentsRepository.ts:
+  - Retiramos private, constructor, all, create e a interface pois o TypeORM tem métodos prontos para isso, deixando apenas o método findByDate.
+  - Importamos EntityRepository e Repository
+      import { EntityRepository, Repository } from 'typeorm';
+  - Utilizamos o decorator com o parâmetro Appointment que é o model:
+      @EntityRepository(Appointment)
+  - Extendemos Repository que contém os métodos CRUD
+      class AppointmentsRepository extends Repository<Appointment> {
+      Essa interface Repository recebe como parâmetro o model desse repositório
+  - Substituiremos:
+      public findByDate(date: Date): Appointment | null {
+        const findAppointment = this.appointments.find(appointment =>
+          isEqual(date, appointment.date),
+        );
+    Por:
+      public async findByDate(date: Date): Promise<Appointment | null> {
+        const findAppointment = await this.findOne({
+            where: { date },
+        });
+    findOne: método do TypeORM que procura por um item. Como é uma Promise, precisamos utilizar async/await e informar que será uma Promise passando o tipo do retorno como parâmetro 
+    where: { date }: poderia ser where: { date: date } mas utilizamos short syntax para procuramos por uma date do DB que seja igual a date recebida. É como uma query solicitando encontrar um appointment onde a data do appointment (date) seja igual ao findByDate(date: Date).
+    É como se fosse: const response = await findByDate(date) onde findByDate(date) retorna uma Promise e response tem o formato Appointment | null.
+  - Retiramos isEqual que não utilizaremos mais aqui
+
+- Em src/services/CreateAppointmentService.ts:
+  - Retiramos private, constructor
+  - Importamos getCustomRepository para termos acesso aos métodos CRUD do TypeORM.
+      import { getCustomRepository } from 'typeorm';
+  - Dentro de execute:
+      - Declaramos uma variável que terá acesso aos métodos:
+          const appointmentsRepository = getCustomRepository(AppointmentsRepository);
+          Agora appointmentsRepository tem acesso aos métodos CRUD, etc...
+  - Retiramos this de this.appointmentsRepository que é essa variável criada.
+  - Precisamos do await aqui porque findByDate é uma Promise.
+      const findAppointmentInSameDate = await appointmentsRepository.findByDate(
+        appointmentDate,
+      );
+  - Salvando no DB:
+      O método create só cria o objeto mas não salva. Precisamos salvar com:
+        await appointmentsRepository.save(appointment);
+        Como usamos await precisamos tornar essa função assíncrona com async e como estamos utilizando async teremos o retorno como uma Promise, devemos informar também:
+          Substituiremos:
+            public execute({ date, provider }: Request): Appointment {
+          Por:
+            public async execute({ date, provider }: Request): Promise<Appointment> {
+
+- Em src/routes/appointments.routes.ts:
+    - Importamos getCustomRepository:
+        import { getCustomRepository } from 'typeorm';
+    - No método GET:
+      - Substituímos:
+          const appointmentsRepository = new AppointmentsRepository();
+          const appointments = appointmentsRepository.all();
+        Por:
+          const appointmentsRepository = getCustomRepository(AppointmentsRepository);
+          const appointments = appointmentsRepository.find();
+
+    - No método POST:
+        - Substituímos:
+            const createAppointment = new CreateAppointmentService(
+              appointmentsRepository,
+            );
+          Por:
+            const createAppointment = new CreateAppointmentService();
+          Pois não precisa mais do appointmentsRepository
+        - Precisamos mudar a função para assíncrona com async/await:
+            appointmentsRouter.post('/', async (request, response) => {
+            const appointment = await createAppointment.execute({ date: parsedDate, provider });
+
+- Instalando reflect-metadata para usarmos os decorators:
+    yarn add reflect-metadata
+- Importando reflect-metadata no primeiro arquivo da aplicação (src/server.ts):
+    import 'reflect-metadata';
+- Em ormconfig.json especificamos as entidades:
+    "entities": [
+      "./src/models/*.ts"
+    ],
