@@ -2002,3 +2002,127 @@ No Insomnia temos uma forma mais fácil de passar esse token que é no Auth -> B
 }
 
 - Crie o arquivo src/middlewares/ensureAuthenticated.ts:
+    import { Request, Response, NextFunction } from 'express';
+    import {verify} from 'jsonwebtoken';
+
+    export default function ensureAuthenticated(
+      request: Request,
+      response: Response,
+      next: NextFunction
+    ): void {
+      const authHeader = request.headers.authorization;
+      if(!authHeader) {
+        throw new Error("JWT token is missing");
+      }
+
+      const [, token] = authHeader.split(' ');
+      const decoded = verify(token, 'f60981211c42664d9eb97e22a047f966');
+    }
+
+    Passamos o next para a aplicação seguir ao restante das rotas se o usuário estiver autenticado.
+    Passamos void como retorno e os tipos de dados.
+    authHeader: pega o token dos headers
+    split: dividimos o Bearer do token e pegamos somente o token [, token]. Não precisamos passar o nome da variável que não queremos utilizar e sim apenas uma vírgula.
+    verify: verifica se o token é válido e retorna o token codificado em decoded.
+    Como estamos passando a chave secreta aqui também, criaremos um arquivo de configuração para não ficar duplicando código e também porque é mais seguro.
+
+
+DICA: Para descobrir os tipos, passamos o mouse em cima, colocamos um parâmetro na função ou clicamos em algum método (CTRL + clique).
+
+- Crie o arquivo de configuração src/config/auth.ts:
+    export default {
+      jwt: {
+        secret: 'f60981211c42664d9eb97e22a047f966',
+        expiresIn: '1d',
+      },
+    };
+
+- Em src/services/AuthenticateUserService.ts:
+  - Importamos o arquivo de configuração src/config/auth.ts:
+      import authconfig from '../config/auth';
+  
+  - Alteramos a chave secreta e o expiresIn, faremos a desestruturação para facilitar:
+      const {secret, expiresIn} = authconfig.jwt;
+      const token = sign({}, secret , {
+        subject: user.id,
+        expiresIn,
+      });
+
+- Em src/middlewares/ensureAuthenticated.ts:
+  - Importamos o arquivo de configuração src/config/auth.ts:
+      import authconfig from '../config/auth';
+
+  - Passamos a secret para o verify:
+      const decoded = verify(token, authconfig.jwt.secret);
+        try {
+          const decoded = verify(token, authconfig.jwt.secret);
+          console.log(decoded);
+          return next();
+        } catch {
+          throw new Error("Invalid JWT token");
+        }
+      
+      Esse decoded terá os dados do payload do token (iat, exp, sub).
+      Se der tudo certo, segue as rotas com next().
+      O verify retornará um erro caso o token não seja válido e como esse erro não é a mensagem que queremos, colocaremos um try e captaremos o erro de catch, colocando nossa mensagem:
+      No Typescript não precisamos colocar catch (err), somente catch.
+
+- Em src/routes/appointments.routes.ts:
+  - Importamos o middleware:
+      import ensureAuthenticated from '../middlewares/ensureAuthenticated';
+
+  - Informamos que irá aplicar esse middleware em todas as rotas de agendamentos.
+      appointmentsRouter.use(ensureAuthenticated);
+
+No Insomnia faremos os testes com o método GET na rota /appointments retornando conforme abaixo:
+  - Não enviar o token: retorna "JWT token is missing".
+  - Enviar o token errado: retorna "Invalid JWT token".
+  - Enviar o token correto: retorna todos os appointments.
+  - Verificar no terminal o console.log(decoded): retorna:
+      {
+        iat: 1595274504,
+        exp: 1595360904,
+        sub: 'c93f927b-c3c6-4ad2-b49d-61bdbbc3bc38'
+      }
+
+Agora uma das coisas importantes para fazermos é incluir as informações desse usuário que gerou o token nas próximas requisições/middlewares/rotas que forem executar a partir de agora.
+Tudo que incluirmos em request e response do middleware, em toda rota que for executado depois do middleware, as informações também ficarão presentes.
+
+- Em src/middlewares/ensureAuthenticated.ts:
+  - Criamos uma interface para informar qual tipo de dado o token retornará:
+      interface TokenPayload {
+        iat: number;
+        exp:number;
+        sub: string;
+      }
+
+  - Dentro do try desestruturamos forçamos um formato para decoded usando a palavra reservada "as":
+      const { sub } = decoded as TokenPayload;
+
+  - Qual usuário está realizando a requisição passando o sub(id do usuário) para id:
+      request.user = {
+          id: sub,
+        };
+
+    Isso gera um erro porque request não tem user. Nesse caso vamos sobrescrever o tipo da biblioteca que estamos importando (express).
+    Sempre que modificarmos o comportamento de uma biblioteca, precisaremos modificar os tipos dela.
+    
+- Criamos o arquivo src/@types/express.d.ts:
+    declare namespace Express {
+      export interface Request {
+        user: {
+          id: string;
+        };
+      }
+    }
+
+  express.d.ts:
+    express: nome da biblioteca que faremos alteração
+    d: definição de tipos
+    declare namespace Express: para sobrescrever uma tipagem de dentro de Express, namespace existe                            também dentro de Express, por exemplo.
+    export interface Request: sobrescrevendo aquela exportação do Request que já existe de dentro                             do Express. Isso NÃO substituirá e sim anexará ao que já existe.
+    user: { id: string; };: informação a ser acrescentada, o user que possui o id.
+
+  Agora request.user não tem mais erro porque já faz parte da biblioteca do Express e temos acesso em todas as rotas com request.user. Se fizermos um console.log(request.user); ele retornará o id do usuário.
+  Não tinha como prosseguirmos sem fazer isso. Existem outras formas de fazer, pesquise na internet.
+

@@ -2,6 +2,7 @@ import { getRepository } from 'typeorm';
 import User from '../models/User';
 import { compare } from 'bcryptjs';
 import { sign } from 'jsonwebtoken';
+import authconfig from '../config/auth';
 
 interface Request {
   email: string;
@@ -26,9 +27,10 @@ class AuthenticateUserService {
       throw new Error("Invalid email or password");
     }
 
-    const token = sign({}, 'f60981211c42664d9eb97e22a047f966', {
+    const {secret, expiresIn} = authconfig.jwt;
+    const token = sign({}, secret , {
       subject: user.id,
-      expiresIn: '1d',
+      expiresIn,
     });
 
     return { user, token };
