@@ -7,9 +7,7 @@ import ensureAuthenticated from '../middlewares/ensureAuthenticated';
 
 const appointmentsRouter = Router();
 
-// appointmentsRouter.use(ensureAuthenticated);
-
-// ************ FAZER UM GIT STASH E TESTAR ******************
+appointmentsRouter.use(ensureAuthenticated);
 
 appointmentsRouter.get('/', async (request, response) => {
     const appointmentsRepository = getCustomRepository(AppointmentsRepository);

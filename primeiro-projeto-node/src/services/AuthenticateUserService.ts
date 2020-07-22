@@ -27,8 +27,8 @@ class AuthenticateUserService {
       throw new Error("Invalid email or password");
     }
 
-    const {secret, expiresIn} = authconfig.jwt;
-    const token = sign({}, secret , {
+    const { secret, expiresIn } = authconfig.jwt;
+    const token = sign({}, secret, {
       subject: user.id,
       expiresIn,
     });
