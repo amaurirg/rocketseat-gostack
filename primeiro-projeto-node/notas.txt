@@ -1830,7 +1830,7 @@ Autenticação de usuário que após a confirmação do mesmo aotentar se autent
 - Validando credenciais:
   - Crie o arquivo src/routes/sessions.routes.ts:
       - Copie o conteúdo de src/routes/users.routes.ts
-      - Retire o import de CReateUSerService
+      - Retire o import de CreateUSerService
       - Dentro de POST deixe somente um response.json:
           return response.json({ ok: true });
       - Altere usersRouter para sessionsRouter nos três lugares
@@ -1899,7 +1899,7 @@ Autenticação de usuário que após a confirmação do mesmo aotentar se autent
     - Em execute:
       - Criamos o objeto para termos acesso aos métodos como o findOne:
           const usersRepository = getRepository(User);
-          const user = usersRepository.findOne({ where: { email } });
+          const user = await usersRepository.findOne({ where: { email } });
           if (!user) {
             throw new Error("Invalid email or password");
           }
@@ -1969,7 +1969,7 @@ Autenticação de usuário que após a confirmação do mesmo aotentar se autent
 
           return { user, token };
 
-          - Agora precisamos informar na interface o token:
+          - Agora precisamos informar o token na interface:
               interface Response {
                 user: User;
                 token: string;
@@ -2040,10 +2040,10 @@ DICA: Para descobrir os tipos, passamos o mouse em cima, colocamos um parâmetro
 - Em src/services/AuthenticateUserService.ts:
   - Importamos o arquivo de configuração src/config/auth.ts:
       import authconfig from '../config/auth';
-  
-  - Alteramos a chave secreta e o expiresIn, faremos a desestruturação para facilitar:
-      const {secret, expiresIn} = authconfig.jwt;
-      const token = sign({}, secret , {
+  type: NUNCA armazene a imagem no DB e sim o caminho dela.
+  type: NUNCA armazene a imagem no DB e sim o caminho dela.iresIn, faremos a desestruturação para facilitar:
+  type: NUNCA armazene a imagem no DB e sim o caminho dela.hconfig.jwt;
+  type: NUNCA armazene a imagem no DB e sim o caminho dela. {
         subject: user.id,
         expiresIn,
       });
@@ -2054,10 +2054,10 @@ DICA: Para descobrir os tipos, passamos o mouse em cima, colocamos um parâmetro
 
   - Passamos a secret para o verify:
       const decoded = verify(token, authconfig.jwt.secret);
-        try {
-          const decoded = verify(token, authconfig.jwt.secret);
-          console.log(decoded);
-          return next();
+        try {type: NUNCA armazene a imagem no DB e sim o caminho dela.
+          contype: NUNCA armazene a imagem no DB e sim o caminho dela., authconfig.jwt.secret);
+          contype: NUNCA armazene a imagem no DB e sim o caminho dela.
+          rettype: NUNCA armazene a imagem no DB e sim o caminho dela.
         } catch {
           throw new Error("Invalid JWT token");
         }
@@ -2180,6 +2180,13 @@ UPLOAD DE IMAGENS
       yarn add multer
       yarn add @types/multer -D
 
+- Crie o arquivo tmp/.gitkeep para que apenas os arquivos da pasta tmp sejam ignorados e não a pasta em si.
+
+- Incluir no .gitignore para ignorar todos os arquivos menos o .gitkeep:
+    tmp/*
+    !tmp/.gitkeep
+  Isso garante que a pasta criada no ambiente de produção, github, etc. seja sempre vazia.
+
 - Crie o arquivo de configuração src/config/upload.ts:
   - Importamos o multer:
       import multer from 'multer';
@@ -2226,12 +2233,7 @@ storage: multer.diskStorage => para armazenar as imagens na própria máquina po
       }),
     };
 
-- Crie o arquivo tmp/.gitkeep para que apenas os arquivos da pasta tmp sejam ignorados e não a pasta em si.
 
-- Incluir no .gitignore para ignorar todos os arquivos menos o .gitkeep:
-    tmp/*
-    !tmp/.gitkeep
-  Isso garante que a pasta criada no ambiente de produção, github, etc. seja sempre vazia.
 
 - Em src/routes/users.routes.ts:
   - Importamos:
