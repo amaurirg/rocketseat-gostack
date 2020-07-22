@@ -2160,6 +2160,10 @@ UPLOAD DE IMAGENS
 - Execute a migration:
     yarn typeorm migration:run
 
+- Em src/models/User.ts incluímos o campo avatar abaixo de password:
+    @Column()
+    avatar: string;
+
 - Criamos uma rota de avatar para usuários:
   - Em src/routes/users.routes.ts:
     - Importamos ensureAuthenticated:
@@ -2290,4 +2294,302 @@ SALVANDO O AVATAR NO BANCO DE DADOS
     }
 
     export default UpdateUserAvatarService;
+
+
+- Em src/routes/users.routes.ts:
+  - Importamos o service de update:
+      import UpdateUserAvatarService from '../services/UpdateUserAvatarService';
+
+  - No método PATCH:
+      usersRouter.patch('/avatar',
+      ensureAuthenticated,
+      upload.single('avatar'),
+      async (request, response) => {
+        try{
+          const updateUserAVatar = new UpdateUserAvatarService();
+          await updateUserAVatar.execute({
+            user_id: request.user.id,
+            avatarFilename: request.file.filename,
+          });
+
+          return response.json({ok: true});
+
+        } catch (err) {
+            return response.status(400).json({ error: err.message });
+        }
+      });
+
+      Criamos uma instância de UpdateUserAvatarService.
+      Como execute é uma Promise, usamos await.
+      Como o middleware ensureAuthenticated seta o id do usuário, capturamos ele com request.user.id (que incluímos anteriormente na biblioteca do Express) .
+      Por enquanto o retorno é uma mensagem { ok: true }.
+      O retorno de erro para PATCH será o mesmo de POST.
+
+- Em src/services/UpdateUserAvatarService.ts:
+    Precisamos atualizar um usuário, então acessaremos o repositório do typeorm (getRepository):
+  - Importamos getRepository, model e path:
+      import { getRepository } from 'typeorm';
+      import User from '../models/User';
+      import path from 'path';
+
+  - Em execute criamos o objeto de getRepository:
+      const usersRepository = getRepository(User);
+
+  Precisamos verificar se o id que estamos recebendo nesse service é o id de um usuário válido porque esse service não deve se basear no que está fora dele, então verificamos se essas variáveis são válidas:
+    const user = await usersRepository.findOne(user_id);
+  O findOne procura por um usuário. Se não encontrou retorna um erro.
+  Verificamos se o usuário já tinha um avatar para deletarmos o anterior:
+    Como já temos o caminho correto do avatar em src/config/upload.ts, faremos algumas alterações para buscarmos essa informação:
+      - Em src/config/upload.ts:
+          Criamos tmpFolder com o caminho e passamos para a função.
+          Criamos também o directory com tmpFolder para podermos acessá-lo.
+          Ficando assim:
+            import path from 'path';
+            import crypto from 'crypto';
+            import multer from 'multer';
+
+            const tmpFolder = path.resolve(__dirname, '..', '..', 'tmp');
+
+            export default {
+              directory: tmpFolder,
+              storage: multer.diskStorage({
+                destination: tmpFolder,
+                filename(request, file, callback) {
+                  const filehash = crypto.randomBytes(10).toString('hex');
+                  const filename = `${filehash}-${file.originalname}`;
+                  
+                  return callback(null, filename);
+                }
+              }),
+            };
+    
+- Voltando ao "se o usuário já tinha um avatar" src/services/UpdateUserAvatarService.ts:
+    if (user.avatar) {
+      const userAvatarFilePath = path.join(uploadConfig.directory, user.avatar);
+    }
+
+    O join une dois caminhos: o diretório com o arquivo que excluiremos.
+    Checando se esse arquivo realmente existe:
+      const userAvatarFileExists = await fs.promises.stat(userAvatarFilePath);
+    
+    fs.promises.stat:
+      fs: file system do Node
+      promises: garante que estaremos usando as funções do fs em formato de promise ao invés de callback assim conseguimos usar await para aguardar o resultado.
+      stat: traz o status do arquivo somente se ele existir
+
+    Caso exista, deletaremos:
+      if(userAvatarFileExists) {
+        fs.promises.unlink(userAvatarFilePath);
+      }
+
+    Agora que o arquivo já foi deletado, podemos atualizar o avatar pegando o repositório e atualizando com usersRepository.update porém já temos o user e o usersRepository:
+    Passamos o novo arquivo para o campo avatar de user:
+      user.avatar = avatarFilename;
+    E salvamos o novo avatar, atualizando o usuário no DB:
+      await usersRepository.save(user);
+
+    O save funciona para criar um usuário verificando o parâmetro (user) se tem um id e atualiza, se não tiver ele cria esse usuário.
+
+    Retornamos user e precisamos informar o retorno da Promise que estava como void:
+      return user;
+      public async execute({ user_id, avatarFilename }: Request): Promise<User> {
+
+- Em src/routes/users.routes.ts:
+  - Pegamos o user:
+      const user = await updateUserAVatar.execute({
+  
+  - Deletamos o password do retorno:
+      delete user.password;
+  
+  - Retornamos no json:
+      return response.json(user);
+
+
+
+ROTAS PARA VERMOS OS ARQUIVOS DE UPLOAD
+=======================================
+- Em src/server.ts:
+    - Importamos directory:
+        import uploadConfig from './config/upload';
+    - Especificamos a rota /files que mostrará o próprio arquivo :
+        app.use('/files', express.static(uploadConfig.directory));
+      express.static: serve uma pasta de forma estática
+    
+    No navegador acessamos a rota http://localhost:3333/files/<nome_da_imagem> que está no campo avatar. Exemplo:
+    http://localhost:3333/files/932826b37891eaf95ac2-Perfil3.jpg
+
+
+TRATANDO EXCESSÕES (EXCEPTION HANDLING)
+=======================================
+  EXCEPTION HANDLING: Lidar com erros na aplicação
+  Criamos classes de erro para termos a flexibilidade de modificarmos as mensagens e comportamentos de como os erro são gerados, bem como manipular o status_code.
+  - Criando a classse principal de erro:
+    - Crie o arquivo src/errors/AppError.ts:
+        class AppError {
+          public readonly message: string;
+          
+          public readonly statusCode: number;
+
+          constructor(message: string, statusCode = 400) {
+            this.message = message;
+            this.statusCode = statusCode;
+          }
+        }
+
+        export default AppError;
+
+Para os arquivos em src/services:
+  - Importamos o AppError:
+      import AppError from '../errors/AppError';
+
+- Em src/services/AuthenticateUserService.ts:
+  - Troque Error por AppError nos dois lugares
+  - Após a mensagem de erro coloque um outro parâmetro com erro 401:
+      throw new AppError("Invalid email or password", 401);
+
+- Em src/services/CreateAppointmentService.ts:
+    if (findAppointmentInSameDate) {
+      throw new AppError("This appointment is already booked");
+    }
+
+- Em src/services/CreateUserService.ts:
+    if (checkUserExists) {
+      throw new AppError('Email address already used.');
+    }
+
+- Em src/services/UpdateUserAvatarService.ts:
+    if (!user) {
+      throw new AppError("Only authenticated users can change.", 401);
+    }
+
+Alteramos também no middleware:
+- Em src/middlewares/ensureAuthenticated.ts:
+    import AppError from '../errors/AppError';
+
+    if (!authHeader) {
+      throw new AppError("JWT token is missing", 401);
+    }
+   
+    catch {
+      throw new AppError("Invalid JWT token", 401);
+    }
+
+Para que os novos status code sejam mostrados precisamos informar nas rotas:
+  - Em src/routes/sessions.routes.ts:
+    - Altere:
+        return response.status(400).json({ error: err.message });
+      Por:
+        return response.status(err.statusCode).json({ error: err.message });
+  Agora quando um erro for gerado a aplicação retornará os novos status code.
+
+
+LIDANDO COM ERROS
+=================
+Global Exception Handler: um middleware que vai captar todos os erros da aplicação independente de onde vieram e vão cair em um ponto central onde podemos manipulá-los como quisermos.
+Para começar, vamos retirar DE TODOS OS ARQUIVOS DE ROTAS os try/catch.
+
+- Em src/routes/appointments.routes.ts:
+    appointmentsRouter.post('/', async (request, response) => {
+        const { provider_id, date } = request.body;
+        const parsedDate = parseISO(date);
+        const createAppointment = new CreateAppointmentService();
+        const appointment = await createAppointment.execute({ date: parsedDate, provider_id });
+
+        return response.json(appointment);
+    });
+
+- Em src/routes/sessions.routes.ts:
+    sessionsRouter.post('/', async (request, response) => {
+      const { email, password } = request.body;
+      const authenticateUSer = new AuthenticateUserService();
+
+      const { user, token } = await authenticateUSer.execute({
+        email,
+        password,
+      });
+      delete user.password;
+
+      return response.json({ user, token });
+    });
+
+- Em src/routes/users.routes.ts:
+    usersRouter.post('/', async (request, response) => {
+      const { name, email, password } = request.body;
+      const createUser = new CreateUserService();
+      const user = await createUser.execute({
+        name,
+        email,
+        password,
+      });
+      delete user.password;
+
+      return response.json(user);
+    });
+
+    usersRouter.patch('/avatar',
+      ensureAuthenticated,
+      upload.single('avatar'),
+      async (request, response) => {
+        const updateUserAVatar = new UpdateUserAvatarService();
+        const user = await updateUserAVatar.execute({
+          user_id: request.user.id,
+          avatarFilename: request.file.filename,
+        });
+        delete user.password;
+        return response.json(user);
+      });
+
+Agora criaremos um middleware de erro
+
+- Em src/server.ts:
+  - Exatamente depois de app.use(routes); :
+  Os middlewares para tratativas de erros no Express recebem 4 parâmetros e por isso se diferenciam dos demais:
+    app.use((err, request, response, next) => {
+
+    });
+  
+  - Vamos definir os tipos para os parâmetros:
+    - Importamos os tipos e a classe AppError:
+        import express, { Request, Response, NextFunction } from 'express';
+        import AppError from './errors/AppError';
+
+      app.use((err: Error, request: Request, response: Response, next: NextFunction) => {
+        
+      });
+
+      Se foi um erro gerado pela aplicação (se é uma instância de AppError). Se for, devolveremos esse erro uma forma amigável ao frontend para que possa ser feita a tratativa da exceção.
+      Essa é a nossa primeira tratativa de erro:
+        app.use((err: Error, request: Request, response: Response, next: NextFunction) => {
+          if(err instanceof AppError) {
+            return response.status(err.statusCode).json({
+              status: 'error',
+              message: err.message,
+            });
+          }
+
+          return response.status(500).json({
+            status: 'error',
+            message: 'Internal server error',
+          });
+        });
+
+  Quando utilizamos async/await o Express não consegue captar os erros que são gerados. Para isso iremos instalar um pacote:
+    yarn add express-async-errors
+  
+  - Importamos esse pacote logo após a importação do express:
+      import 'express-async-errors';
+
+No Insomnia enviaremos um email errado para a rota /sessions e devemos ter esse retorno:
+  O status code 401 e a resposta:
+  {
+    "status": "error",
+    "message": "Invalid email or password"
+  }
+
+Se tiver algum erro inesperado o retorno será:
+  O status code 500 e a resposta:
+  {
+    "status": "error",
+    "message": "Internal server error"
+  }
 
