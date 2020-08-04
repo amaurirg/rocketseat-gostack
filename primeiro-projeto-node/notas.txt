@@ -114,6 +114,60 @@ DEBUG NO VSCODE
     A barra abaixo ficará vermelha, o terminal informará que o debugger está ouvindo e poderemos usar breakpoints.
   
 
+
+TESTES
+======
+
+Instalar framework de testes Jest
+    npm install jest
+    Iniciar o Jest  
+        npx jest --init
+            Quando perguntar se deseja adicionar um script de teste dentro do package.json para rodar os scripts de teste, responda sim "y"
+            Quando perguntar se deseja executar os scripts no node ou browser, responda node.
+            Quando perguntar se cada coisa que fizer em um teste n�0�0o seja v��lido para outro teste, responda sim "y".
+            Ser�� criado o arquivo jest.config.js
+            Exemplo de teste:
+                describe('Generate Unique ID', () => {
+                    it('should generate an unique ID', () => {
+                        expect(2+2).toBe(4);  // espera-se que 2+2 seja 4
+                    });
+                });
+
+                describe => nome do teste
+                it => descri�0�4�0�0o do teste
+
+Tipos de testes
+    integration:
+        testam fluxo de uma rota inteira da app
+    unit:
+        testam uma fun�0�4�0�0o espec��fica da app de forma muito isolada
+
+Para utilizar vari��veis de ambiente
+    D��vidas sobre vari��veis de ambiente:
+        https://blog.rocketseat.com.br/variaveis-ambiente-nodejs/
+    Instalar cross-env
+        https://github.com/kentcdodds/cross-env
+        npm install cross-env
+    Em knesfile.js:
+      test: {
+        client: 'sqlite3',
+        connection: {
+        filename: './src/database/test.sqlite'
+        },
+        migrations: {
+        directory: './src/database/migrations'
+        },
+        useNullAsDefault: true, // para que os campos do sqlite possam ser nulos por padr�0�0o
+      },
+    Em package.json, teremos uma vari��vel de ambiente dispon��vel com o script "test" :
+        "test": "cross-env NODE_ENV=test jest"
+    Para pegar uma vari��vel de ambiente no node:
+        const env = process.env.NODE_ENV
+
+Instalar supertest (modo dev) para fazer requisi�0�4�0�1es HTTP a api e valida�0�4�0�1es nos testes
+    npm install supertest -D
+
+
   ROUTES
   ======
 
@@ -162,6 +216,13 @@ Informando o tipo para appointments:
           provider: string,
           date: Date;
       }
+
+      Para declarar um tipo string temos algumas opções:
+      campo: Array<string>;
+      campo: string[];
+      Se tiver mais de um tipo podemos incluir:
+      campo: Array<string | number>;
+
   - Declare que esse array é composto pela interface criada:
       const appointments: Appointment[] = [];
 
@@ -383,7 +444,7 @@ Com essas mudanças os arquivos ficaram assim:
     export default AppointmentsRepository;
 
 Recapitulando:
-- Criamos um arquivo src/repositories/AppointmentsRepository.ts responsável por mexer nos dados de agendamento de alguma forma. Então armazenamos os agendamentos dentro dele e qualquer função que for llistar, criar, deletar, alterar deverá ficar aqui.
+- Criamos um arquivo src/repositories/AppointmentsRepository.ts responsável por mexer nos dados de agendamento de alguma forma. Então armazenamos os agendamentos dentro dele e qualquer função que for listar, criar, deletar, alterar deverá ficar aqui.
 - src/routes/appointments.routes.ts vai perdendo cada vez mais as responsabilidades de formato de dados (pertence ao model) e a maneira como os dados são armazenados. A rota não deve ter a responsabilidade de se conectar com a fonte de dados da aplicação e sim o repositório.
 
 
@@ -1838,7 +1899,7 @@ Autenticação de usuário que após a confirmação do mesmo aotentar se autent
           const { email, password } = request.body;
   
   Como teremos regras de negócio para verificação se email e senha existem, se estão corretos, gerar o token JWT, etc. precisamos criar um service:
-    - Crie o src/services/AuthenticateUserService.ts
+    - Crie o src/services/AuthenticateUserService.ts:
         class AuthenticateUserService {
           public async execute({ email, password }): Promise<void> {
 
@@ -2022,14 +2083,15 @@ No Insomnia temos uma forma mais fácil de passar esse token que é no Auth -> B
     Passamos o next para a aplicação seguir ao restante das rotas se o usuário estiver autenticado.
     Passamos void como retorno e os tipos de dados.
     authHeader: pega o token dos headers
-    split: dividimos a palavra Bearer do token e pegamos somente o token [, token]. Não precisamos         passar o nome da variável que não queremos utilizar e sim apenas uma vírgula.
+    split: dividimos a palavra Bearer do token e pegamos somente o token [, token]. Não precisamos 
+           passar o nome da variável que não queremos utilizar e sim apenas uma vírgula.
     verify: verifica se o token é válido e retorna o token codificado em decoded.
     Como estamos passando a chave secreta aqui também, criaremos um arquivo de configuração para não ficar duplicando código e também porque é mais seguro.
 
 
 DICA: Para descobrir os tipos, passamos o mouse em cima, colocamos um parâmetro na função ou clicamos em algum método (CTRL + clique).
 
-- Crie o arquivo de configuração src/config/auth.ts:
+- Crie o arquivo de configuração src/config/auth.ts inserindo a chave secreta:
     export default {
       jwt: {
         secret: 'f60981211c42664d9eb97e22a047f966',
@@ -2169,7 +2231,8 @@ UPLOAD DE IMAGENS
     - Importamos ensureAuthenticated:
         import ensureAuthenticated from '../middlewares/ensureAuthenticated';
 
-    - Especificamos a rota passando ensureAuthenticated porque o usuário precisa estar autenticado    para conseguir alterar seu avatar.
+    - Especificamos a rota passando ensureAuthenticated porque o usuário precisa estar autenticado  
+      para conseguir alterar seu avatar.
       usersRouter.patch('/avatar', ensureAuthenticated, async (request, response) => {
         return response.json({ ok: true });
       });
@@ -2185,7 +2248,7 @@ UPLOAD DE IMAGENS
       yarn add multer
       yarn add @types/multer -D
 
-- Crie o arquivo tmp/.gitkeep para que apenas os arquivos da pasta tmp sejam ignorados e não a pasta em si.
+- Crie o arquivo tmp/.gitkeep para que apenas os arquivos da pasta tmp sejam ignorados e não a pasta em si. Esse arquivo não terá conteúdo.
 
 - Incluir no .gitignore para ignorar todos os arquivos menos o .gitkeep:
     tmp/*
@@ -2202,7 +2265,9 @@ UPLOAD DE IMAGENS
   - Importamos o crypto para gerar hashes e criptografias:
       import crypto from 'crypto';
 
-storage: multer.diskStorage => para armazenar as imagens na própria máquina por enquanto. Precisa                                  receber duas propriedades: destination e filename. Podemos ver isso                                 em node_modules/@types/multer/index.d.ts
+storage: multer.diskStorage => para armazenar as imagens na própria máquina por enquanto. Precisa 
+         receber duas propriedades: destination e filename. Podemos ver isso 
+         em node_modules/@types/multer/index.d.ts
   - destination: onde serão salvos os arquivos de upload na aplicação.
       __dirname: refere-se ao caminho completo do diretório desse arquivo upload.ts.
       '..': para subir um nível
@@ -2219,7 +2284,8 @@ storage: multer.diskStorage => para armazenar as imagens na própria máquina po
         randomBytes(10): gera um texto de 10 bytes
         toString: transforma esses bytes em uma string HEX (hexadecimal)
         filename: Após criado o hash, o incluiremos ao início do nome do arquivo.
-        callback: aceita duas propriedades. O primeiro parâmetro é um erro caso exista. Passamos              null porque não aconteceu nenhum erro. O segundo parâmetro é o nome do arquivo              caso não tenha ocorrido nenhum erro. Passamos o nome do arquivo (filename).
+        callback: aceita duas propriedades. O primeiro parâmetro é um erro caso exista. Passamos  
+                  null porque não aconteceu nenhum erro. O segundo parâmetro é o nome do arquivo caso não tenha ocorrido nenhum erro. Passamos o nome do arquivo (filename).
 
   O arquivo ficou assim:
     import path from 'path';
@@ -2246,31 +2312,31 @@ storage: multer.diskStorage => para armazenar as imagens na própria máquina po
   - Abaixo de const usersRouter = Router(); criamos a instância de multer passando a configuração:
       const upload = multer(uploadConfig);
 
-- Informamos que o upload será de apenas um arquivo utilizando single() do multer dentro do método    POST, após ensureAuthenticated para que o usuário já esteja autenticado:
-    upload.single('avatar'),
-    O parâmetro de single é o nome do campo que conterá a imagem quando a rota for chamada.
-    Se apresentar erro, delete a pasta node_modules/@types/multer/node_modules.
+  - Informamos que o upload será de apenas um arquivo utilizando single() do multer dentro do método    POST, após ensureAuthenticated para que o usuário já esteja autenticado:
+      upload.single('avatar'),
+      O parâmetro de single é o nome do campo que conterá a imagem quando a rota for chamada.
+      Se apresentar erro, delete a pasta node_modules/@types/multer/node_modules.
 
-O método POST ficou assim:
-  usersRouter.patch('/avatar',
-    ensureAuthenticated,
-    upload.single('avatar'),
-    async (request, response) => {
-    console.log(request.file);
-      return response.json({ ok: true });
-  });
+  O método POST ficou assim:
+    usersRouter.patch('/avatar',
+      ensureAuthenticated,
+      upload.single('avatar'),
+      async (request, response) => {
+      console.log(request.file);
+        return response.json({ ok: true });
+    });
 
-  O console.log mostra os dados do arquivo enviado no upload:
-    {
-      fieldname: 'avatar',
-      originalname: 'Perfil1.jpg',
-      encoding: '7bit',
-      mimetype: 'image/jpeg',
-      destination: '/home/amauri/cursos/rocketseat/rocketseat-gostack/primeiro-projeto-node/tmp',
-      filename: 'e023904a3dc4d4187d43-Perfil1.jpg',
-      path: '/home/amauri/cursos/rocketseat/rocketseat-gostack/primeiro-projeto-node/tmp/e023904a3dc4d4187d43-Perfil1.jpg',
-      size: 52095
-    }
+    O console.log mostra os dados do arquivo enviado no upload:
+      {
+        fieldname: 'avatar',
+        originalname: 'Perfil1.jpg',
+        encoding: '7bit',
+        mimetype: 'image/jpeg',
+        destination: '/home/amauri/cursos/rocketseat/rocketseat-gostack/primeiro-projeto-node/tmp',
+        filename: 'e023904a3dc4d4187d43-Perfil1.jpg',
+        path: '/home/amauri/cursos/rocketseat/rocketseat-gostack/primeiro-projeto-node/tmp/e023904a3dc4d4187d43-Perfil1.jpg',
+        size: 52095
+      }
 
 - No Insomnia precisamos enviar um campo com nome avatar (upload.single('avatar'))
     Enviaremos como Multipart Form
@@ -2369,20 +2435,25 @@ SALVANDO O AVATAR NO BANCO DE DADOS
     }
 
     O join une dois caminhos: o diretório com o arquivo que excluiremos.
-    Checando se esse arquivo realmente existe:
-      const userAvatarFileExists = await fs.promises.stat(userAvatarFilePath);
+
+  - Importamos fs do Node para trabalhar com arquivos (file system)
+      import fs from 'fs';
     
-    fs.promises.stat:
-      fs: file system do Node
-      promises: garante que estaremos usando as funções do fs em formato de promise ao invés de callback assim conseguimos usar await para aguardar o resultado.
-      stat: traz o status do arquivo somente se ele existir
+      fs.promises.stat:
+        fs: file system do Node
+        promises: garante que estaremos usando as funções do fs em formato de promise ao invés de callback assim conseguimos usar await para aguardar o resultado.
+        stat: traz o status do arquivo somente se ele existir
+        unlink: para deletar
+    
+  - Checando se esse arquivo realmente existe:
+      const userAvatarFileExists = await fs.promises.stat(userAvatarFilePath);
 
-    Caso exista, deletaremos:
-      if(userAvatarFileExists) {
-        fs.promises.unlink(userAvatarFilePath);
-      }
+      Caso exista, deletaremos:
+        if(userAvatarFileExists) {
+          fs.promises.unlink(userAvatarFilePath);
+        }
 
-    Agora que o arquivo já foi deletado, podemos atualizar o avatar pegando o repositório e atualizando com usersRepository.update porém já temos o user e o usersRepository:
+  Agora que o arquivo já foi deletado, podemos atualizar o avatar pegando o repositório e atualizando com usersRepository.update porém já temos o user e o usersRepository:
     Passamos o novo arquivo para o campo avatar de user:
       user.avatar = avatarFilename;
     E salvamos o novo avatar, atualizando o usuário no DB:
@@ -2438,7 +2509,9 @@ TRATANDO EXCESSÕES (EXCEPTION HANDLING)
 
         export default AppError;
 
-Para os arquivos em src/services:
+=======================================
+=  Para os arquivos em src/services:  =
+=======================================
   - Importamos o AppError:
       import AppError from '../errors/AppError';
 
@@ -2592,4 +2665,430 @@ Se tiver algum erro inesperado o retorno será:
     "status": "error",
     "message": "Internal server error"
   }
+
+
+
+****************************************************
+*                                                  *
+*    APÓS AS MUDANÇAS OS ARQUIVOS FICARAM ASSIM    *
+*                                                  *
+****************************************************
+
+- Em src/server.ts:
+    import 'reflect-metadata';
+    import express, { Request, Response, NextFunction } from 'express';
+    import 'express-async-errors'
+    import routes from './routes';
+    import './database';
+    import uploadConfig from './config/upload';
+    import AppError from './errors/AppError';
+
+    const app = express();
+    app.use(express.json());
+    app.use('/files', express.static(uploadConfig.directory));
+    app.use(routes);
+
+    app.use((err: Error, request: Request, response: Response, next: NextFunction) => {
+      if (err instanceof AppError) {
+        return response.status(err.statusCode).json({
+          status: 'error',
+          message: err.message,
+        });
+      }
+
+      return response.status(500).json({
+        status: 'error',
+        message: 'Internal server error',
+      });
+    });
+
+    app.listen(3333, () => {
+      console.log('Server started on port 3333');
+    });
+
+- Em src/routes/index.ts:
+    import { Router } from 'express';
+    import appointmentsRouter from './appointments.routes';
+    import usersRouter from './users.routes';
+    import sessionsRouter from './sessions.routes';
+
+    const routes = Router();
+
+    routes.use('/appointments', appointmentsRouter);
+    routes.use('/users', usersRouter);
+    routes.use('/sessions', sessionsRouter);
+
+    export default routes;
+
+- Em src/routes/sessions.routes.ts:
+    import { Router } from 'express';
+    import AuthenticateUserService from '../services/AuthenticateUserService';
+
+    const sessionsRouter = Router();
+
+    sessionsRouter.post('/', async (request, response) => {
+      const { email, password } = request.booody;
+      const authenticateUSer = new AuthenticateUserService();
+
+      const { user, token } = await authenticateUSer.execute({
+        email,
+        password,
+      });
+      delete user.password;
+
+      return response.json({ user, token });
+    });
+
+    export default sessionsRouter;
+
+- Em src/routes/users.routes.ts:
+    import { Router, response } from 'express';
+    import CreateUserService from '../services/CreateUserService';
+    import ensureAuthenticated from '../middlewares/ensureAuthenticated';
+    import multer from 'multer';
+    import uploadConfig from '../config/upload';
+    import UpdateUserAvatarService from '../services/UpdateUserAvatarService';
+
+    const usersRouter = Router();
+    const upload = multer(uploadConfig);
+
+    usersRouter.post('/', async (request, response) => {
+      const { name, email, password } = request.body;
+      const createUser = new CreateUserService();
+      const user = await createUser.execute({
+        name,
+        email,
+        password,
+      });
+      delete user.password;
+
+      return response.json(user);
+    });
+
+    usersRouter.patch('/avatar',
+      ensureAuthenticated,
+      upload.single('avatar'),
+      async (request, response) => {
+        const updateUserAVatar = new UpdateUserAvatarService();
+        const user = await updateUserAVatar.execute({
+          user_id: request.user.id,
+          avatarFilename: request.file.filename,
+        });
+        delete user.password;
+        return response.json(user);
+      });
+
+    export default usersRouter;
+
+- Em src/routes/appointments.routes.ts:
+    import { Router } from 'express';
+    import { getCustomRepository } from 'typeorm';
+    import { parseISO } from 'date-fns';
+    import AppointmentsRepository from '../repositories/AppointmentsRepository';
+    import CreateAppointmentService from '../services/CreateAppointmentService';
+    import ensureAuthenticated from '../middlewares/ensureAuthenticated';
+
+    const appointmentsRouter = Router();
+
+    appointmentsRouter.use(ensureAuthenticated);
+
+    appointmentsRouter.get('/', async (request, response) => {
+        const appointmentsRepository = getCustomRepository(AppointmentsRepository);
+        const appointments = await appointmentsRepository.find();
+        return response.json(appointments);
+    });
+
+    appointmentsRouter.post('/', async (request, response) => {
+        const { provider_id, date } = request.body;
+        const parsedDate = parseISO(date);
+        const createAppointment = new CreateAppointmentService();
+        const appointment = await createAppointment.execute({ date: parsedDate, provider_id });
+
+        return response.json(appointment);
+    });
+
+    export default appointmentsRouter;
+
+- Em src/config/auth.ts:
+    export default {
+      jwt: {
+        secret: 'f60981211c42664d9eb97e22a047f966',
+        expiresIn: '1d',
+      },
+    };
+
+- Em src/config/upload.ts:
+    import path from 'path';
+    import crypto from 'crypto';
+    import multer from 'multer';
+
+    const tmpFolder = path.resolve(__dirname, '..', '..', 'tmp');
+
+    export default {
+      directory: tmpFolder,
+      storage: multer.diskStorage({
+        destination: tmpFolder,
+        filename(request, file, callback) {
+          const filehash = crypto.randomBytes(10).toString('hex');
+          const filename = `${filehash}-${file.originalname}`;
+          
+          return callback(null, filename);
+        }
+      }),
+    };
+
+- Em src/errors/AppError.ts:
+    class AppError {
+      public readonly message: string;
+      
+      public readonly statusCode: number;
+
+      constructor(message: string, statusCode = 400) {
+        this.message = message;
+        this.statusCode = statusCode;
+      }
+    }
+
+    export default AppError;
+
+- Em src/@types/express.d.ts:
+    declare namespace Express {
+      export interface Request {
+        user: {
+          id: string;
+        };
+      }
+    }
+
+- Em src/models/User.ts:
+    import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+
+    @Entity('users')
+    class User {
+        @PrimaryGeneratedColumn('uuid')
+        id: string;
+
+        @Column()
+        name: string;
+        
+        @Column()
+        email: string;
+
+        @Column()
+        password: string;
+
+        @Column()
+        avatar: string;
+
+        @CreateDateColumn()
+        created_at: Date;
+
+        @UpdateDateColumn()
+        updated_at: Date;
+    }
+
+    export default User;
+
+- Em src/middlewares/ensureAuthenticated.ts:
+    import { Request, Response, NextFunction } from 'express';
+    import { verify } from 'jsonwebtoken';
+    import authconfig from '../config/auth';
+    import AppError from '../errors/AppError';
+
+    interface TokenPayload {
+      iat: number;
+      exp: number;
+      sub: string;
+    }
+
+    export default function ensureAuthenticated(
+      request: Request,
+      response: Response,
+      next: NextFunction
+    ): void {
+      const authHeader = request.headers.authorization;
+      if (!authHeader) {
+        throw new AppError("JWT token is missing", 401);
+      }
+
+      const [, token] = authHeader.split(' ');
+      try {
+        const decoded = verify(token, authconfig.jwt.secret);
+        const { sub } = decoded as TokenPayload;
+        
+        request.user = {
+          id: sub,
+        };
+
+        return next();
+      } catch {
+        throw new AppError("Invalid JWT token", 401);
+      }
+    }
+
+- Em src/services/AuthenticateUserService.ts:
+    import { getRepository } from 'typeorm';
+    import User from '../models/User';
+    import { compare } from 'bcryptjs';
+    import { sign } from 'jsonwebtoken';
+    import authconfig from '../config/auth';
+    import AppError from '../errors/AppError';
+
+    interface Request {
+      email: string;
+      password: string;
+    }
+
+    interface Response {
+      user: User;
+      token: string;
+    }
+
+    class AuthenticateUserService {
+      public async execute({ email, password }: Request): Promise<Response> {
+        const usersRepository = getRepository(User);
+        const user = await usersRepository.findOne({ where: { email } });
+        if (!user) {
+          throw new AppError("Invalid email or password", 401);
+        }
+
+        const passwordMatched = await compare(password, user.password);
+        if (!passwordMatched) {
+          throw new AppError("Invalid email or password", 401);
+        }
+
+        const { secret, expiresIn } = authconfig.jwt;
+        const token = sign({}, secret, {
+          subject: user.id,
+          expiresIn,
+        });
+
+        return { user, token };
+      }
+    }
+
+    export default AuthenticateUserService;
+
+- Em src/services/CreateAppointmentService.ts:
+    // Responsável pela criação de agendamento
+    import { startOfHour } from 'date-fns';
+    import { getCustomRepository } from 'typeorm';
+
+    import Appointment from '../models/Appointment';
+    import AppointmentsRepository from '../repositories/AppointmentsRepository';
+    import AppError from '../errors/AppError';
+
+    interface Request {
+      provider_id: string;
+      date: Date;
+    }
+
+    class CreateAppointmentService {
+      public async execute({ date, provider_id }: Request): Promise<Appointment> {
+        const appointmentsRepository = getCustomRepository(AppointmentsRepository);
+        const appointmentDate = startOfHour(date);
+        const findAppointmentInSameDate = await appointmentsRepository.findByDate(
+          appointmentDate,
+        );
+
+        if (findAppointmentInSameDate) {
+          throw new AppError("This appointment is already booked");
+        }
+
+        const appointment = appointmentsRepository.create({
+          provider_id,
+          date: appointmentDate,
+        });
+
+        await appointmentsRepository.save(appointment);
+
+        return appointment;
+      }
+    }
+
+    export default CreateAppointmentService;
+
+- Em src/services/CreateUserService.ts:
+    import { getRepository } from 'typeorm';
+    import User from '../models/User';
+    import { hash } from 'bcryptjs';
+    import AppError from '../errors/AppError';
+
+
+    interface Request {
+      name: string;
+      email: string;
+      password: string;
+    }
+
+    class CreateUserService {
+      public async execute({ name, email, password }: Request): Promise<User> {
+        const usersRepository = getRepository(User);
+
+        const checkUserExists = await usersRepository.findOne({
+          where: { email },
+        });
+        if (checkUserExists) {
+          throw new AppError('Email address already used.');
+        }
+
+        const hashedPassword = await hash(password, 8);
+
+        const user = usersRepository.create({
+          name,
+          email,
+          password: hashedPassword,
+        });
+
+        await usersRepository.save(user);
+
+        return user;
+      }
+    }
+
+    export default CreateUserService;
+
+- Em src/services/UpdateUserAvatarService.ts:
+    import { getRepository } from 'typeorm';
+    import path from 'path';
+    import User from '../models/User';
+    import uploadConfig from '../config/upload';
+    import fs from 'fs';
+    import AppError from '../errors/AppError';
+
+
+    interface Request {
+      user_id: string;
+      avatarFilename: string;
+    }
+
+    class UpdateUserAvatarService {
+      public async execute({ user_id, avatarFilename }: Request): Promise<User> {
+        const usersRepository = getRepository(User);
+        const user = await usersRepository.findOne(user_id);
+        if (!user) {
+          throw new AppError("Only authenticated users can change.", 401);
+        }
+        if (user.avatar) {
+          const userAvatarFilePath = path.join(uploadConfig.directory, user.avatar);
+          const userAvatarFileExists = await fs.promises.stat(userAvatarFilePath);
+          if(userAvatarFileExists) {
+            fs.promises.unlink(userAvatarFilePath);
+          }
+        }
+        user.avatar = avatarFilename;
+        await usersRepository.save(user);
+
+        return user;
+      }
+    }
+
+    export default UpdateUserAvatarService;
+
+- Em .gitignore:
+    node_modules/
+    .idea/
+    tmp/*
+    !tmp/.gitkeep
+
 
