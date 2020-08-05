@@ -1,0 +1,127 @@
+- Instalando Create React App:
+    npm install -g create-react-app
+
+- Criando o projeto:
+    create-react-app primeiro-projeto-react --template=typescript
+
+- Deletamos arquivos css, svg, ico e de testes (exceto setupTests.ts) que não utilizaremos e suas importações
+
+- Instalamos as dependências:
+    yarn add react-router-dom
+    yarn add @types/react-router-dom -D 
+
+- Criamos o arquivo src/pages/Dashboard/index.tsx:
+    import React from 'react';
+
+    const Dashboard: React.FC = () => {
+      return <h1>Dashboard</h1>
+    }
+
+    export default Dashboard;
+
+    Dessa forma acima é mais fácil para definir qual o tipo de retorno da função. Usaremos o tipo FC (FunctionComponent) do React. Não é mais utilizado o tipo de classe para criar componente.
+    A outra forma seria:
+      function Dashboard() {}
+    Mas fica mais verboso.
+
+- Criamos um outro arquivo src/pages/Repository/index.tsx:
+    import React from 'react';
+
+    const Repository: React.FC = () => {
+      return <h1>Repository</h1>
+    }
+
+    export default Repository;
+
+- Criamos o arquivo de rotas src/routes/index.tsx:
+    import React from 'react';
+    import { Switch, Route } from 'react-router-dom';
+    import Dashboard from '../pages/Dashboard';
+    import Repository from '../pages/Repository';
+
+    const Routes: React.FC = () => (
+      <Switch>
+        <Route path='/' exact component={Dashboard} />
+        <Route path='/repository' component={Repository} />
+      </Switch>
+    );
+
+    export default Routes;
+
+    Poderíamos criar assim:
+      const Routes: React.FC = () => {
+        return (
+
+        );
+      }
+    Porém quando o return vem logo em seguida fazemos assim para dicar menos verboso:
+      const Routes: React.FC = () => (
+
+      )
+
+- Em src/App.tsx:
+    import React from 'react';
+    import { BrowserRouter } from 'react-router-dom';
+    import Routes from './routes';
+
+    const App: React.FC = () => (
+      <BrowserRouter>
+        <Routes />
+      </BrowserRouter>
+    );
+
+    export default App;
+
+    BrowserRouter: para acessar as rotas no browse, exemplo: /dashboard
+    Switch: garante que apenas uma rota seja exibida
+
+
+
+ESTILOS CSS
+===========
+- Instalar Styled Components para estilos:
+    yarn add styled-components
+    yarn add @types/styled-components -D
+
+- Instalar Polished para trabalhar com cores:
+    yarn add polished
+
+Podemos incluir CSS de uma forma mais interessante. O que faríamos com input dentro do form dessa forma:
+ form input {
+
+ } 
+
+Faremos assim:
+  export const Form = styled.form`
+    margin-top: 40px;
+    max-width: 700px;
+
+    display: flex;
+
+    input {
+      flex: 1;
+      height: 70px;
+      padding: 0 24px;
+      border: 0;
+      border-radius: 5px 0 0 5px;
+    }
+  `;
+
+Se tivermos um atributo hover podemos incluir diretamente dentro do elemento:
+  button {
+    width: 210px;
+    height: 70px;
+    background: #04D361;
+    border-radius: 0 5px 5px 0;
+    border: 0;
+    color: #FFF;
+    font-weight: bold;
+
+    &:hover {
+      background: ${shade(0.2, '#04D361')};
+    }
+  }
+
+- Instalar pacote de ícones:
+    yarn add react-icons
+
