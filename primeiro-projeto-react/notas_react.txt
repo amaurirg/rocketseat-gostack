@@ -125,3 +125,423 @@ Se tivermos um atributo hover podemos incluir diretamente dentro do elemento:
 - Instalar pacote de ícones:
     yarn add react-icons
 
+
+
+*********************************
+*   OS ARQUIVOS FICARAM ASSIM   *
+*********************************
+
+- Em src/styles/global.ts:
+    import { createGlobalStyle } from 'styled-components';
+    import githubBackground from '../assets/github-background.svg';
+
+    export default createGlobalStyle`
+      * {
+        margin: 0;
+        padding: 0;
+        outline: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        background: #F0F0F5 url(${githubBackground}) no-repeat 70% top;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      body, input, button {
+        font: 16px Roboto, sans-serif;
+      }
+
+      #root {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 40px 20px;
+      }
+
+      button {
+        cursor: pointer;
+      }
+    `;
+
+- Em src/App.tsx:
+    import React from 'react';
+    import { BrowserRouter } from 'react-router-dom';
+    import Routes from './routes';
+    import GlobalStyle from './styles/global';
+
+    const App: React.FC = () => (
+      <>
+        <BrowserRouter>
+          <Routes />
+        </BrowserRouter>
+        <GlobalStyle />
+      </>
+    );
+
+    export default App;
+
+- Em src/index.tsx:
+    import React from 'react';
+    import ReactDOM from 'react-dom';
+    import App from './App';
+
+    ReactDOM.render(
+      <React.StrictMode>
+        <App />
+      </React.StrictMode>,
+      document.getElementById('root')
+    );
+
+- Em src/pages/Dashboard/index.tsx:
+    import React from 'react';
+    import { FiChevronRight } from 'react-icons/fi';
+    import logoImg from '../../assets/logo.svg';
+    import { Title, Form, Repositories } from './styles';
+
+    const Dashboard: React.FC = () => {
+      return (
+        <>
+          <img src={logoImg} alt="Github Explorer" />
+          <Title>Explore repositórios no Github</Title>
+
+          <Form>
+            <input placeholder="Digite o nome do repositório" />
+            <button type="submit">Pesquisar</button>
+          </Form>
+
+          <Repositories>
+            <a href="teste">
+              <img src="https://avatars3.githubusercontent.com/u/11185971?s=460&u=7fa8c89bd71c2309d770d6ea421f0e8c6a9996e8&v=4" alt="Amauri" />
+              <div>
+                <strong>amaurirg/rocketseat-es6</strong>
+                <p>Curso gratuito Rocketseat ES6</p>
+              </div>
+              <FiChevronRight size={20} />
+            </a>
+
+            <a href="teste">
+              <img src="https://avatars3.githubusercontent.com/u/11185971?s=460&u=7fa8c89bd71c2309d770d6ea421f0e8c6a9996e8&v=4" alt="Amauri" />
+              <div>
+                <strong>amaurirg/rocketseat-es6</strong>
+                <p>Curso gratuito Rocketseat ES6</p>
+              </div>
+              <FiChevronRight size={20} />
+            </a>
+
+            <a href="teste">
+              <img src="https://avatars3.githubusercontent.com/u/11185971?s=460&u=7fa8c89bd71c2309d770d6ea421f0e8c6a9996e8&v=4" alt="Amauri" />
+              <div>
+                <strong>amaurirg/rocketseat-es6</strong>
+                <p>Curso gratuito Rocketseat ES6</p>
+              </div>
+              <FiChevronRight size={20} />
+            </a>
+          </Repositories>
+
+        </>
+      )
+    }
+
+    export default Dashboard;
+
+- Em src/pages/Dashboard/styles.ts:
+    import styled from 'styled-components';
+    import {shade} from 'polished';
+
+    export const Title = styled.h1`
+      font-size: 48px;
+      color: #3A3A3A;
+      max-width: 450px;
+      line-height: 56px;
+      margin-top: 80px;
+    `;
+
+    export const Form = styled.form`
+      margin-top: 40px;
+      max-width: 700px;
+
+      display: flex;
+
+      input {
+        flex: 1;
+        height: 70px;
+        padding: 0 24px;
+        border: 0;
+        border-radius: 5px 0 0 5px;
+        color: #3A3A3A;
+
+        &::placeholder {
+          color: #A8A8B3;
+        }
+      }
+
+      button {
+        width: 210px;
+        height: 70px;
+        background: #04D361;
+        border-radius: 0 5px 5px 0;
+        border: 0;
+        color: #FFF;
+        font-weight: bold;
+        transition: background-color 0.2s;
+
+        &:hover {
+          background: ${shade(0.2, '#04D361')};
+        }
+      }
+    `;
+
+    export const Repositories = styled.div`
+      margin-top: 80px;
+      max-width: 700px;
+
+      a {
+        background: #FFF;
+        border-radius: 5px;
+        width: 100%;
+        padding: 24px;
+        display: block;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        transition: transform 0.2s;
+
+        &:hover {
+          transform: translateX(10px);
+        }
+
+        & + a {
+          margin-top: 16px;
+        }
+
+        img {
+          width: 64px;
+          height: 64px;
+          border-radius: 50%;
+        }
+
+        div {
+          margin-left: 16px;
+
+          strong {
+            font-size: 20px;
+            color: #3D3D4D;
+          }
+
+          p {
+            font-size: 18px;
+            color: #A8A8B3;
+            margin-top: 4px;
+          }
+        }
+
+        svg {
+          margin-left: auto;
+          color: #CBCBD6;
+        }
+      }
+    `;
+
+- Em src/pages/Repository/index.tsx:
+    import React from 'react';
+
+    const Repository: React.FC = () => {
+      return <h1>Repository</h1>
+    }
+
+    export default Repository;
+
+
+- Em src/routes/index.tsx:
+    import React from 'react';
+    import { Switch, Route } from 'react-router-dom';
+    import Dashboard from '../pages/Dashboard';
+    import Repository from '../pages/Repository';
+
+    const Routes: React.FC = () => (
+      <Switch>
+        <Route path='/' exact component={Dashboard} />
+        <Route path='/repository' component={Repository} />
+      </Switch>
+    );
+
+    export default Routes;
+
+
+**********************
+*  FIM DOS ARQUIVOS  *
+**********************
+
+
+CONECTANDO A API
+================
+
+- Instalar AXIOS:
+    yarn add axios
+
+- Criamos o arquivo src/services/api.ts:
+    import axios from 'axios';
+
+    const api = axios.create({
+      baseURL: 'https://api.github.com',
+    });
+
+    export default api;
+
+- Em src/pages/Dashboard/index.tsx:
+  - Importamos a api:
+      import api from '../../services/api';
+
+  - Usaremos o useState para armazenamento do estado:
+      const [repositories, setRepositories] = useState([]);
+
+  - Precisaremos:
+    - Ter acesso ao que foi digitado no input
+        const [newRepo, setNewRepo] = useState('');
+        - No input acrescentamos:
+            value={newRepo}
+            onChange={e => setNewRepo(e.target.value)}
+
+            value: texto do input
+            onChange: recebe um evento(e) quando o usuário altera o valor do input
+            e.target.value: valor do input
+
+        - No Form chamamos a função quando o formulário for submetido:
+            <Form onSubmit={handleAddRepository}>
+
+        - Função handleAddRepository somente para visualizarmos o value de input:
+            function handleAddRepository(event: FormEvent<HTMLFormElement>): void {
+              event.preventDefault();
+              console.log(newRepo);
+            }
+
+            event: evento de submit do formulário
+            FormEvent: o tipo de retorno importado do React que recebe um parâmetro
+            HTMLFormElement: representa o elemento HTML do form
+            event.preventDefault(); : para não recarregar a página
+
+    - Consumir api do github
+    - Adicionar um novo repositório
+    - Salvar novo repositório no estado
+        
+  - Precisaremos criar essa função:
+      async function handleAddRepository(event: FormEvent<HTMLFormElement>): Promise<void> {
+        event.preventDefault();
+        const response = await api.get(`repos/${newRepo}`);
+        const repository = response.data;
+        setRepositories([...repositories, repository]);
+
+      }
+  
+    Nessa hora terá um erro de typescript porque repositories está como retorno "never", um tipo que não deveria existir:
+      setRepositories([...repositories, repository]);
+    
+    - Precisamos então criar uma interface:
+        interface Repository {
+          full_name: string;
+          description: string;
+          owner: {
+            login: string;
+            avatar_url: string;
+          }
+        }
+
+    - E alterar a declaração da variável com o tipo correto para corrigir o erro:
+        const [repositories, setRepositories] = useState<Repository[]>([]);
+
+    - A variável repository também está com o tipo "any" e vamos corrigir:
+        O método get do axios não sabe qual será o tipo do retorno. Se clicarmos, pressionando CTRL, em get (const response = await api.get(`repos/${newRepo}`);) entraremos em node_modules/axios/index.d.ts e veremos que:
+          get<T = any, R = AxiosResponse<T>>(url: string, config?: AxiosRequestConfig): Promise<R>;
+        
+        Ou seja, R é uma resposta da Promise que recebe T como parâmetro. Entrando em AxiosResponse veremos o formato de data que é T:
+          export interface AxiosResponse<T = any>  {
+            data: T;
+            ...
+      
+      - Vamos incluir o retorno do tipo Repository alterando:
+          const response = await api.get(`repos/${newRepo}`);
+
+        Para:
+          const response = await api.get<Repository>(`repos/${newRepo}`);
+
+        Agora repository tem acesso a interface Repository, exemplo:
+          repository.description
+          repository.owner.avatar_url
+
+
+
+    - LIDANDO COM ERROS
+      - Iniciamos o valor como string vazia pois teremos mensagens de erro:
+          const [inputError, setInputError] = useState('');
+      
+      - Fazemos a verificação se o input está vazio ou com repositório inexistente:
+          async function handleAddRepository(event: FormEvent<HTMLFormElement>): Promise<void> {
+            event.preventDefault();
+
+            if(!newRepo) {
+              setInputError('Digite o autor/nome do repositório');
+            }
+            
+            try {
+              const response = await api.get<Repository>(`repos/${newRepo}`);
+              const repository = response.data;
+              setRepositories([...repositories, repository]);
+              setNewRepo('');
+            } catch (err) {
+                setInputError('Repositório não encontrado');
+            }
+            
+          }
+
+      - Precisamos mostrar esse erro abaixo do Form:
+        - Criamos o elemento Error como span em src/pages/Dashboard/styles.ts:
+            export const Error = styled.span`
+              display: block;
+              color: #C53030;
+              margin-top: 8px;
+            `;
+        
+        - Voltando em src/pages/Dashboard/index.tsx, importamos Error:
+            import { Title, Form, Repositories, Error } from './styles';
+
+        - Fazemos a verificação que só retornará se as duas condições forem true porque só queremos mostrar a mensagem se houver erro:
+            {inputError && <Error>{inputError}</Error>}
+
+        - Podemos ter acesso às propriedades do componente estilizado:
+          - Colocaremos uma borda no input quando houver um erro. Temos que passar as props ao elemento estilizado, no caso form;
+            - Em Form:
+                Como usaremos:
+                  <Form hasError={!!inputError} onSubmit={handleAddRepository}>
+                Poderia ser assim:
+                  <Form hasError={Boolean(inputError)} onSubmit={handleAddRepository}>
+
+                {Boolean(inputError)} ou {!!inputError}: se o valor for vazio o Boolean colocará false e se tiver algum valor colocará true
+
+                !! ---> truthy, falsy: Com um ! converte o boolean de true para false ou vice-versa e com dois !! converte o que foi convertido anteriormente com um !
+                truthy: qualquer valor que não é vazio
+                falsy: qualquer valor vazio
+
+            - Criamos uma interface em src/pages/Dashboard/styles.ts porque o Form não tem hasError:
+                interface FormProps {
+                  hasError: boolean;
+                }
+
+              - Informamos o retorno na construção do elemento:
+                  export const Form = styled.form<FormProps>`
+
+              - Como não temos acesso as propriedades dentro dos parâmetros da função em styled components, colocaremos dentro do input a borda e colocaremos uma função para recebermos as props:
+                - Precisamos importar css de styled-components para termos sintaxe css na função:
+                    import styled, { css } from 'styled-components';
+
+                input {
+                  ...
+                  border: 2px solid #FFF;
+                  border-right: 0;
+
+                  ${(props) => props.hasError && css`
+                    border-color: #C53030;
+                  `}
+                }
+
+
+
