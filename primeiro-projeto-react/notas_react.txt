@@ -863,3 +863,281 @@ Porém ele não reconhece que o params possui repository. Criamos uma interface 
 **********************
 *  FIM DOS ARQUIVOS  *
 **********************
+
+
+
+ESTILIZANDO DETALHE DO REPOSITÓRIO
+==================================
+
+- Criamos o arquivo src/pages/Repository/styles.ts:
+  - Criamos um Header com o logo e o botão de voltar:
+      import styled from 'styled-components';
+
+      export const Header = styled.header`
+
+      `;
+
+- Em src/pages/Repository/index.tsx:
+  - Importamos o Header, a logo e o Link:
+      import { Header } from './styles';
+      import logoImg from '../../assets/logo.svg';
+      import { useRouteMatch, Link } from 'react-router-dom';
+
+- Alteramos o return de <h1> para () e colocamos o Header, logo, Link dentro:
+    const Repository: React.FC = () => {
+      const { params } = useRouteMatch<RepositoryParams>();
+      return (
+        <Header>
+          <img src={logoImg} alt="Github Explorer" />
+          <Link to="/">
+            <FiChevronLeft size={16} />
+            Voltar
+          </Link>
+        </Header>
+      );
+    }
+
+- Vamos estilizar em src/pages/Repository/styles.ts:
+    import styled from 'styled-components';
+
+    export const Header = styled.header`
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+
+      a {
+        display: flex;
+        align-items: center;
+        text-decoration: none;
+        color: #A8A8B3;
+        transition: color 0.2s;
+
+        &:hover {
+          color: #666;
+        }
+
+        svg {
+          margin-right: 4px;
+        }
+      }
+    `;
+
+- Agora vamos criar um novo componente que conterá as informações do repositório.
+  - Em src/pages/Repository/index.tsx:
+      <RepositoryInfo>
+        <header>
+          <img src="https://avatars3.githubusercontent.com/u/11185971?s=460&u=7fa8c89bd71c2309d770d6ea421f0e8c6a9996e8&v=4" alt="Amauri"/>
+          <div>
+            <strong>amaurirg/repositorio</strong>
+            <p>descrição do repositorio</p>
+          </div>
+        </header>
+        <ul>
+          <li>
+            <strong>1808</strong>
+            <span>Stars</span>
+          </li>
+          <li>
+            <strong>48</strong>
+            <span>Forks</span>
+          </li>
+          <li>
+            <strong>67</strong>
+            <span>Issues abertas</span>
+          </li>
+        </ul>
+      </RepositoryInfo>
+
+OBS: Sempre crie elementos no HTML com até dois níveis abaixo como no <header> que tem um nível com <img> e <div> e a <div> que tem outro nível. Se passar disso é melhor pensar em isolar em componentes como um <RepositoryInfoHeader> para conseguir visualizar melhor, dar manutenção e com um css mais organizado e não poluído.
+
+- Criaremos o componente para as issues:
+    import { FiChevronLeft, FiChevronRight } from 'react-icons/fi';
+    import { Header, RepositoryInfo, Issues } from './styles';
+
+      <Issues>
+        <Link to="asdsdf">
+          <div>
+            <strong>asdsf</strong>
+            <p>fdddf</p>
+          </div>
+          <FiChevronRight size={20} />
+        </Link>
+      </Issues>
+
+- Vamos estilizar em src/pages/Repository/styles.ts:
+    export const Issues = styled.div`
+      margin-top: 80px;
+
+      a {
+        background: #FFF;
+        border-radius: 5px;
+        width: 100%;
+        padding: 24px;
+        display: block;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        transition: transform 0.2s;
+
+        &:hover {
+          transform: translateX(10px);
+        }
+
+        & + a {
+          margin-top: 16px;
+        }
+
+        div {
+          margin: 0 16px;
+          flex: 1;
+
+          strong {
+            font-size: 20px;
+            color: #3D3D4D;
+          }
+
+          p {
+            font-size: 18px;
+            color: #A8A8B3;
+            margin-top: 4px;
+          }
+        }
+
+        svg {
+          margin-left: auto;
+          color: #CBCBD6;
+        }
+      }
+    `;
+
+
+
+LISTANDO ISSUES DA API
+======================
+
+Precisamos carregar as issues junto com a página e para isso utilizaremos useEffect() e a api:
+- Importamos useEffect:
+    import React, { useEffect } from 'react';
+    import api from '../../services/api';
+
+- Teremos duas chamadas a api do Github porque a primeira traz os dados do repositório mas não traz as issues, somente issues_url.
+  Poderíamos fazer dessa forma, fazendo as duas chamadas com async/await:
+    useEffect(() => {
+      async function loadData(): Promise<void> {
+        const repository = await api.get(`repos/${params.repository}`);
+        const issues = await api.get(`repos/${params.repository}/issues`);
+      }
+      loadData();
+    }, [params.repository]);
+
+  Porém a segunda chamada não depende da primeira. Então porque esperar? Faremos com que ambas as chamadas sejam feitas simultanemante.
+
+  Podemos fazer de duas formas:
+    useEffect(() => {
+      async function loadData(): Promise<void> {
+        const [repository, issues] = await Promise.all([
+          api.get(`repos/${params.repository}`),
+          api.get(`repos/${params.repository}/issues`)
+        ]);
+        console.log(repository);
+        console.log(issues);
+      }
+      loadData();
+    }, [params.repository]);
+
+    const [repository, issues]: foi desestruturado de response
+    await: só prosseguirá o resto do código quando as chamadas acabarem
+    Promise.all(): executa várias chamadas assíncronas ao mesmo tempo
+    Existe também o Promise.race(): faz chamada para todas e qual retornar primeiro "ganhou", retornando essa resposta, descartando os resultados das outras.
+
+  Ou dessa outra forma que usaremos no projeto:
+    useEffect(() => {
+      api.get(`repos/${params.repository}`).then(response => {
+        setRepository(response.data);
+      });
+      api.get(`repos/${params.repository}/issues`).then(response => {
+        setIssues(response.data);
+      });
+    }, [params.repository]);
+
+    [params.repository]: esse parâmetro é importante colocarmos porque se houver alguma alteração na variável provavelmente deverá ter que ser feita outra chamada a api.
+
+Agora vamos salvar as informações do repositório dentro do componente.
+- Usaremos useState:
+    import React, { useEffect, useState } from 'react';
+
+- Inicializamos o valor de estado como null para repository:
+    const [repository, setRepository] = useState(null);
+
+Quando criamos um estado que não é um valor primitivo (string, number, boolean), ou seja, para um array ou objeto devemos tipar esse objeto. 
+  - Para isso iremos copiar a interface de Dashboard e incluir mais algumas informações:
+      interface Repository {
+        full_name: string;
+        description: string;
+        stargazers_count: number;
+        forks_count: number;
+        open_issues_count: number;
+        owner: {
+          login: string;
+          avatar_url: string;
+        }
+      }
+
+  - Informamos o retorno como um repositório ou nulo e inicializamos como nulo porque no primeiro carregamento não terá valor:
+      const [repository, setRepository] = useState<Repository | null>(null);
+
+  - Criamos uma interface para issues:
+      interface Issue {
+        id: number;
+        title: string;
+        html_url: string;
+        user: {
+          login: string;
+        }
+      }
+- Inicializamos o valor de estado como um array vazio para issues:
+    const [issues, setIssues] = useState<Issue[]>([]);
+
+Agora substituiremos as informações estáticas do repositório pelas vindas da api:
+  - O Typescript coloca uma ? que signfica optional chaining porque repository pode ser nulo, então o que será mostrado?:
+      <img src={repository?.owner.avatar_url} alt="Amauri" />
+    
+    Isso acontece da seguinte forma:
+      Se existir algo dentro do repositório mostre o avatar e se não existir não mostra nada.
+      É a mesma coisa que:
+        <img src={repository && repository.owner.avatar_url} alt="Amauri" />
+      
+      Ou com operador ternário que mostra exatamente como funciona o optional chaining(?):
+        <img src={repository ? repository.owner.avatar_url : null} alt="Amauri" />
+
+  Resolvemos fazer dessa forma. Se o repositório existir, mostraremos os dados:
+    {repository && (
+      <RepositoryInfo>
+        <header>
+          <img src={repository.owner.avatar_url} alt={repository.owner.login} />
+          <div>
+            <strong>{repository.full_name}</strong>
+            <p>{repository.description}</p>
+          </div>
+        </header>
+        <ul>
+          <li>
+            <strong>{repository.stargazers_count}</strong>
+            <span>Stars</span>
+          </li>
+          <li>
+            <strong>{repository.forks_count}</strong>
+            <span>Forks</span>
+          </li>
+          <li>
+            <strong>{repository.open_issues_count}</strong>
+            <span>Issues abertas</span>
+          </li>
+        </ul>
+      </RepositoryInfo>
+    )}
+
+  O Typescript não mostrará mais o ? porque ele entende que foi feita uma condicional acima.
+
+Agora substituiremos as informações estáticas do repositório pelas vindas da api:
+  - Substituiremos também o <Link> por <a> para funcionar o link externo e não uma rota interna.
