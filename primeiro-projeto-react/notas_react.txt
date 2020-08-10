@@ -1,12 +1,67 @@
 - Instalando Create React App:
     npm install -g create-react-app
 
-- Criando o projeto:
+- Criando o projeto React com Typescript:
     create-react-app primeiro-projeto-react --template=typescript
 
-- Deletamos arquivos css, svg, ico e de testes (exceto setupTests.ts) que não utilizaremos e suas importações
+- Em primeiro-projeto-react, deletamos arquivos css, svg, ico e de testes (exceto setupTests.ts) que não utilizaremos e suas importações:
+  - Arquivos deletados:
+    README.md
+    src/App.css
+    src/App.test.tsx
+    src/index.css
+    src/logo.svg
+    src/serviceWorker.ts
+    public/favicon.ico
+    public/logo192.png
+    public/logo512.png
+    public/manifest.json
 
-- Instalamos as dependências:
+  - Retirando conteúdo e importações os arquivos ficarão assim:
+    - Em src/index.tsx:
+        import React from 'react';
+        import ReactDOM from 'react-dom';
+        import App from './App';
+
+        ReactDOM.render(
+          <React.StrictMode>
+            <App />
+          </React.StrictMode>,
+          document.getElementById('root')
+        );
+
+    - Em src/App.tsx:
+        import React from 'react';
+
+        function App() {
+          return (
+            <h1>Hello World</h1>
+          );
+        }
+
+        export default App;
+
+    - Em public/index.html:
+        <!DOCTYPE html>
+        <html lang="en">
+          <head>
+            <meta charset="utf-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1" />
+            <meta name="theme-color" content="#000000" />
+            <title>Github Explorer</title>
+          </head>
+          <body>
+            <noscript>You need to enable JavaScript to run this app.</noscript>
+            <div id="root"></div>
+          </body>
+        </html>
+
+
+
+- Executamos o projeto:
+    yarn start
+
+- Instalamos as dependências para trabalhar com rotas:
     yarn add react-router-dom
     yarn add @types/react-router-dom -D 
 
@@ -79,19 +134,49 @@
 
 ESTILOS CSS
 ===========
-- Instalar Styled Components para estilos:
+- Instalar Styled Components para estilos isolados e não de forma global(padrão) onde muda todos os componentes:
     yarn add styled-components
     yarn add @types/styled-components -D
 
 - Instalar Polished para trabalhar com cores:
     yarn add polished
 
+O que muda seria como no exemplo abaixo:
+  - Em um arquivo styles.css ficaria assim:
+      h1 {
+        font-size: 48px;
+        color: #3A3A3A;
+      }
+  
+  - Em um arquivo styles.ts fica assim:
+      import styled from 'styled-components';
+
+      export const Title = styled.h1`
+        font-size: 48px;
+        color: #3A3A3A;
+      `;
+
+OBS: Caso não fique com a sintaxe do css, no VSCode instale o vscode-styled-components.
+
+- Em src/pages/Dashboard/index.tsx importamos o Title:
+    import { Title} from './styles';
+
+  - Alteramos
+      const Dashboard: React.FC = () => {
+        return <h1>Dashboard</h1>
+      }
+    
+    Por:
+      const Dashboard: React.FC = () => {
+        return <Title>Dashboard</Title>
+      }
+      
 Podemos incluir CSS de uma forma mais interessante. O que faríamos com input dentro do form dessa forma:
  form input {
 
  } 
 
-Faremos assim:
+Faremos assim com Template Literals:
   export const Form = styled.form`
     margin-top: 40px;
     max-width: 700px;
@@ -107,7 +192,7 @@ Faremos assim:
     }
   `;
 
-Se tivermos um atributo hover podemos incluir diretamente dentro do elemento:
+Se tivermos um atributo hover, por exemplo, podemos incluir diretamente dentro do elemento:
   button {
     width: 210px;
     height: 70px;
@@ -121,6 +206,11 @@ Se tivermos um atributo hover podemos incluir diretamente dentro do elemento:
       background: ${shade(0.2, '#04D361')};
     }
   }
+
+- Criamos o arquivo src/styles/global.ts para resetar o css padrão do navegador.
+
+- Criamos a pasta src/assets para armazenar as imagens e colocamos no body.
+
 
 - Instalar pacote de ícones:
     yarn add react-icons
@@ -162,6 +252,16 @@ Se tivermos um atributo hover podemos incluir diretamente dentro do elemento:
         cursor: pointer;
       }
     `;
+
+    #root é a div do public/index.html. Usamos tamanho máximo(max-width) porque no mobile terá menos que 960px. Em padding colocamos 20px para não encostar na direita quando diminuir.
+    background: #F0F0F5 url(${githubBackground}) no-repeat 70% top; incluímos a url em formato de variável com 70% para a direita e alinhada ao topo com top.
+    -webkit-font-smoothing: antialiased;: deixa as fontes mais bem definidas. Só funciona no Chrome.
+    Para instalar a fonte Roboto:
+      https://fonts.google.com/
+      Pesquise por Roboto e selecione as versões:
+        Regular 400
+        Bold 700
+        Em Embed copie o link e cole em public/index.html abaixo do <title>
 
 - Em src/App.tsx:
     import React from 'react';
@@ -321,7 +421,8 @@ Se tivermos um atributo hover podemos incluir diretamente dentro do elemento:
         }
 
         div {
-          margin-left: 16px;
+          margin: 0 16px;
+          flex: 1;
 
           strong {
             font-size: 20px;
@@ -341,6 +442,8 @@ Se tivermos um atributo hover podemos incluir diretamente dentro do elemento:
         }
       }
     `;
+
+    Em div o flex: 1; serve para que a imagem não fique achatada se ajustando ao tamanho disponível.
 
 - Em src/pages/Repository/index.tsx:
     import React from 'react';
@@ -393,6 +496,8 @@ CONECTANDO A API
       import api from '../../services/api';
 
   - Usaremos o useState para armazenamento do estado:
+      import React, { useState } from 'react';
+
       const [repositories, setRepositories] = useState([]);
 
   - Precisaremos:
@@ -470,78 +575,291 @@ CONECTANDO A API
 
 
 
-    - LIDANDO COM ERROS
-      - Iniciamos o valor como string vazia pois teremos mensagens de erro:
-          const [inputError, setInputError] = useState('');
-      
-      - Fazemos a verificação se o input está vazio ou com repositório inexistente:
-          async function handleAddRepository(event: FormEvent<HTMLFormElement>): Promise<void> {
-            event.preventDefault();
+LIDANDO COM ERROS
+=================
 
-            if(!newRepo) {
-              setInputError('Digite o autor/nome do repositório');
-            }
-            
-            try {
-              const response = await api.get<Repository>(`repos/${newRepo}`);
-              const repository = response.data;
-              setRepositories([...repositories, repository]);
-              setNewRepo('');
-            } catch (err) {
-                setInputError('Repositório não encontrado');
-            }
-            
-          }
+  - Iniciamos o valor como string vazia pois teremos mensagens de erro:
+      const [inputError, setInputError] = useState('');
+  
+  - Fazemos a verificação se o input está vazio ou com repositório inexistente:
+      async function handleAddRepository(event: FormEvent<HTMLFormElement>): Promise<void> {
+        event.preventDefault();
 
-      - Precisamos mostrar esse erro abaixo do Form:
-        - Criamos o elemento Error como span em src/pages/Dashboard/styles.ts:
-            export const Error = styled.span`
-              display: block;
-              color: #C53030;
-              margin-top: 8px;
-            `;
+        if(!newRepo) {
+          setInputError('Digite o autor/nome do repositório');
+          return;
+        }
         
-        - Voltando em src/pages/Dashboard/index.tsx, importamos Error:
-            import { Title, Form, Repositories, Error } from './styles';
+        try {
+          const response = await api.get<Repository>(`repos/${newRepo}`);
+          const repository = response.data;
+          setRepositories([...repositories, repository]);
+          setNewRepo('');
+        } catch (err) {
+            setInputError('Repositório não encontrado');
+        }
+        
+      }
 
-        - Fazemos a verificação que só retornará se as duas condições forem true porque só queremos mostrar a mensagem se houver erro:
-            {inputError && <Error>{inputError}</Error>}
+      Como a mensagem do Github virá em inglês, setamos nossa própria mensagem no catch.
 
-        - Podemos ter acesso às propriedades do componente estilizado:
-          - Colocaremos uma borda no input quando houver um erro. Temos que passar as props ao elemento estilizado, no caso form;
-            - Em Form:
-                Como usaremos:
-                  <Form hasError={!!inputError} onSubmit={handleAddRepository}>
-                Poderia ser assim:
-                  <Form hasError={Boolean(inputError)} onSubmit={handleAddRepository}>
+  - Precisamos mostrar esse erro abaixo do Form:
+    - Criamos o elemento Error como span em src/pages/Dashboard/styles.ts:
+        export const Error = styled.span`
+          display: block;
+          color: #C53030;
+          margin-top: 8px;
+        `;
+    
+    - Voltando em src/pages/Dashboard/index.tsx, importamos Error:
+        import { Title, Form, Repositories, Error } from './styles';
 
-                {Boolean(inputError)} ou {!!inputError}: se o valor for vazio o Boolean colocará false e se tiver algum valor colocará true
+    - Fazemos a verificação que só retornará se as duas condições forem true porque só queremos mostrar a mensagem se houver erro:
+        {inputError && <Error>{inputError}</Error>}
 
-                !! ---> truthy, falsy: Com um ! converte o boolean de true para false ou vice-versa e com dois !! converte o que foi convertido anteriormente com um !
-                truthy: qualquer valor que não é vazio
-                falsy: qualquer valor vazio
+    - Limpamos a mensagem de erro caso tenha encontrado o repositório abaixo de setNewRepo('');:
+        setInputError('');
 
-            - Criamos uma interface em src/pages/Dashboard/styles.ts porque o Form não tem hasError:
-                interface FormProps {
-                  hasError: boolean;
-                }
+    - Podemos ter acesso às propriedades do componente estilizado por dentro dos estilos:
+      - Colocaremos uma borda no input quando houver um erro. Temos que passar as props ao elemento estilizado, no caso form;
+        - Em Form, tem que ser nesse componente porque ele é o estilizado:
+            Como usaremos:
+              <Form hasError={!!inputError} onSubmit={handleAddRepository}>
+            Poderia ser assim:
+              <Form hasError={Boolean(inputError)} onSubmit={handleAddRepository}>
 
-              - Informamos o retorno na construção do elemento:
-                  export const Form = styled.form<FormProps>`
+            {Boolean(inputError)} ou {!!inputError}: se o valor for vazio o Boolean colocará false e se tiver algum valor colocará true
 
-              - Como não temos acesso as propriedades dentro dos parâmetros da função em styled components, colocaremos dentro do input a borda e colocaremos uma função para recebermos as props:
-                - Precisamos importar css de styled-components para termos sintaxe css na função:
-                    import styled, { css } from 'styled-components';
+            !! ---> truthy, falsy: Com um ! converte o boolean de true para false ou vice-versa e com dois !! converte o que foi convertido anteriormente com um !
+            truthy: qualquer valor que não é vazio
+            falsy: qualquer valor vazio
 
-                input {
-                  ...
-                  border: 2px solid #FFF;
-                  border-right: 0;
+        - Como o Form não tem hasError, criamos uma interface em src/pages/Dashboard/styles.ts:
+            interface FormProps {
+              hasError: boolean;
+            }
 
-                  ${(props) => props.hasError && css`
-                    border-color: #C53030;
-                  `}
-                }
+          - Informamos o retorno na construção do elemento:
+              export const Form = styled.form<FormProps>`
+
+          - Como não temos acesso as propriedades dentro dos parâmetros da função em styled components, colocaremos dentro do input a borda e colocaremos uma função para recebermos as props. Poderíamos criar um className em Form e estilizá-la mas a forma abaixo é melhor:
+            - Precisamos importar css de styled-components para termos sintaxe css na função:
+                import styled, { css } from 'styled-components';
+
+            input {
+              ...
+              border: 2px solid #FFF;
+              border-right: 0;
+
+              ${(props) => props.hasError && css`
+                border-color: #C53030;
+              `}
+            }
 
 
 
+SALVANDO OS REPOSITÓRIOS NO LOCAL STORAGE
+=========================================
+
+Sempre que atualizamos a página os repositórios somem e para isso iremos armazená-los no localStorage. Assim quando adicionarmos, deletarmos ou alterarmos esses dados, serão mostrados.
+Utilizaremos o useEffect() que recebe dois argumentos: o primeiro é a função e o segundo é a variável. Sempre que essa variável for alterada o useEffect() executará a função e mostrará em tela.
+
+- Importamos o useEffect:
+    import React, { useState, FormEvent, useEffect } from 'react';
+
+- Dentro de useEffect setamos o item com @<nome_da_aplicação>:<nome_da_informação> para que um storage não atrapalhe outro caso estejam utilizando a mesma porta. Como localStorage não aceita array, precisamos convertê-lo em string, usaremos JSON que é uma variável global no Node, React, React Native para que o retorno seja um JSON.
+    useEffect(() => {
+      localStorage.setItem(
+        '@GithubExplorer:repositories',
+        JSON.stringify(repositories),
+      );
+    }, [repositories]);
+
+Agora se inspecionarmos Application->Local Storage->http://localhost:3000 veremos os dados em @GithubExplorer:repositories, porém ainda precisamos manter os dados quando atualizarmos a página.
+Temos duas opções:
+  A primeira criamos useEffect sem nenhuma dependência, ou seja, executaria somente uma vez quando o componente fosse mostrado em tela.
+    useEffect(() => {}, []);
+    Daí pegaríamos os dados no localStorage(getItem) e setaríamos o valor(setRepositories) porém acompanhando o raciocínio:
+      - A aplicação foi mostrada uma vez em tela
+      - Buscamos os dados em localStorage
+      - Setamos o valor de repositories
+    Dessa forma alteramos duas vezes o valor de repositories: uma quando iniciou com valor vazio e outra quando buscamos e alteramos os dados. Preferimos evitar isso.
+  
+  A segunda opção é, como o localStorage é uma api síncrona(não precisa async/await) conseguimos alterar o array por uma função quando declararmos seu valor inicial:
+
+  Antes:
+    const [repositories, setRepositories] = useState<Repository[]>([]);
+
+  Depois:
+    const storagedRepositories = localStorage.getItem('@GithubExplorer:repositories');
+
+      if (storagedRepositories) {
+        return JSON.parse(storagedRepositories);
+      } else {
+        return [];
+      }
+    });
+
+    Pegamos os dados no localStorage, depois verificamos se existe algum valor e inicializamos seu valor com esses ou dados ou se não tiver dados será inicializado como vazio pelo 'else'. Usamos JSON.parse porque quando salvamos foi em formato string e agora precisamos iniciar o valor como um array.
+
+
+
+NAVEGANDO EM ROTAS
+==================
+
+Não podemos utilizar o <a> porque ele recarrega a página. Usaremos o <Link> do React para isso.
+Trocamos <a></a> por <Link></Link> e href="" por to="":
+  <a key={repository.full_name} href="teste">
+  <Link key={repository.full_name} to="/repository">
+
+Somente desse jeito não redicionará corretamente para o repositório porque nossa url será repository/<autor>/<repositório> tendo outras barras e para isso precisamos especificar no arquivo  src/routes/index.tsx a rota com um sinal de + para que o React possa entender que tudo que vier após repository/ faz parte dessa url.
+  <Route path='/repository/:repository+' component={Repository} />
+
+E no <link> colocaremos:
+  <Link key={repository.full_name} to={`/repository/${repository.full_name}`}>
+
+Agora precisamos pegar o nome do repositório:
+  - Importamos useRouteMatch no arquivo src/pages/Repository/index.tsx:
+      import { useRouteMatch } from 'react-router-dom';
+
+  - Retornamos o nome do repositório:
+      return <h1>Repository: {params.repository}</h1>;
+
+Porém ele não reconhece que o params possui repository. Criamos uma interface para isso:
+  interface RepositoryParams {
+    repository: string;
+  }
+
+  E informamos o retorno:
+    const { params } = useRouteMatch<RepositoryParams>();
+
+
+
+*********************************
+*   OS ARQUIVOS FICARAM ASSIM   *
+*********************************
+
+ - Em src/pages/Repository/index.tsx:
+    import React from 'react';
+    import { useRouteMatch } from 'react-router-dom';
+
+    interface RepositoryParams {
+      repository: string;
+    }
+
+    const Repository: React.FC = () => {
+      const { params } = useRouteMatch<RepositoryParams>();
+    return <h1>Repository: {params.repository}</h1>;
+    }
+
+    export default Repository;
+
+- Em src/routes/index.tsx:
+    import React from 'react';
+    import { Switch, Route } from 'react-router-dom';
+    import Dashboard from '../pages/Dashboard';
+    import Repository from '../pages/Repository';
+
+    const Routes: React.FC = () => (
+      <Switch>
+        <Route path='/' exact component={Dashboard} />
+        <Route path='/repository/:repository+' component={Repository} />
+      </Switch>
+    );
+
+    export default Routes;
+
+- Em src/pages/Dashboard/index.tsx:
+    import React, { useState, FormEvent, useEffect } from 'react';
+    import api from '../../services/api';
+    import { FiChevronRight } from 'react-icons/fi';
+    import logoImg from '../../assets/logo.svg';
+    import { Title, Form, Repositories, Error } from './styles';
+    import { Link } from 'react-router-dom';
+
+    interface Repository {
+      full_name: string;
+      description: string;
+      owner: {
+        login: string;
+        avatar_url: string;
+      }
+    }
+
+    const Dashboard: React.FC = () => {
+      const [newRepo, setNewRepo] = useState('');
+      const [inputError, setInputError] = useState('');
+      const [repositories, setRepositories] = useState<Repository[]>(() => {
+        const storagedRepositories = localStorage.getItem('@GithubExplorer:repositories');
+
+        if (storagedRepositories) {
+          return JSON.parse(storagedRepositories);
+        } else {
+          return [];
+        }
+      });
+
+      useEffect(() => {
+        localStorage.setItem(
+          '@GithubExplorer:repositories',
+          JSON.stringify(repositories),
+        );
+      }, [repositories]);
+
+      async function handleAddRepository(event: FormEvent<HTMLFormElement>): Promise<void> {
+        event.preventDefault();
+
+        if(!newRepo) {
+          setInputError('Digite o autor/nome do repositório');
+          return;
+        }
+        
+        try {
+          const response = await api.get<Repository>(`repos/${newRepo}`);
+          const repository = response.data;
+          setRepositories([...repositories, repository]);
+          setNewRepo('');
+          setInputError('');
+        } catch (err) {
+            setInputError('Repositório não encontrado');
+        }
+        
+      }
+      return (
+        <>
+          <img src={logoImg} alt="Github Explorer" />
+          <Title>Explore repositórios no Github</Title>
+
+          <Form hasError={!!inputError} onSubmit={handleAddRepository}>
+            <input
+              value={newRepo}
+              onChange={(e) => setNewRepo(e.target.value)}
+              placeholder="Digite o nome do repositório" />
+            <button type="submit">Pesquisar</button>
+          </Form>
+
+          {inputError && <Error>{inputError}</Error>}
+
+          <Repositories>
+            {repositories.map(repository => (
+              <Link key={repository.full_name} to={`/repository/${repository.full_name}`}>
+                <img src={repository.owner.avatar_url} alt={repository.owner.login} />
+                <div>
+                  <strong>{repository.full_name}</strong>
+                  <p>{repository.description}</p>
+                </div>
+                <FiChevronRight size={20} />
+              </Link>
+            ))}
+          </Repositories>
+
+        </>
+      )
+    }
+
+    export default Dashboard;
+
+
+**********************
+*  FIM DOS ARQUIVOS  *
+**********************
