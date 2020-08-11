@@ -691,14 +691,15 @@ Temos duas opções:
     const [repositories, setRepositories] = useState<Repository[]>([]);
 
   Depois:
+    const [repositories, setRepositories] = useState<Repository[]>(() => {
     const storagedRepositories = localStorage.getItem('@GithubExplorer:repositories');
 
-      if (storagedRepositories) {
-        return JSON.parse(storagedRepositories);
-      } else {
-        return [];
-      }
-    });
+    if (storagedRepositories) {
+      return JSON.parse(storagedRepositories);
+    } else {
+      return [];
+    }
+  });
 
     Pegamos os dados no localStorage, depois verificamos se existe algum valor e inicializamos seu valor com esses ou dados ou se não tiver dados será inicializado como vazio pelo 'else'. Usamos JSON.parse porque quando salvamos foi em formato string e agora precisamos iniciar o valor como um array.
 
@@ -721,6 +722,8 @@ E no <link> colocaremos:
 Agora precisamos pegar o nome do repositório:
   - Importamos useRouteMatch no arquivo src/pages/Repository/index.tsx:
       import { useRouteMatch } from 'react-router-dom';
+
+      Dentro do useRouteMatch teremos os parâmetros da rota.
 
   - Retornamos o nome do repositório:
       return <h1>Repository: {params.repository}</h1>;
@@ -878,10 +881,11 @@ ESTILIZANDO DETALHE DO REPOSITÓRIO
       `;
 
 - Em src/pages/Repository/index.tsx:
-  - Importamos o Header, a logo e o Link:
+  - Importamos o Header, a logo, o Link e os ícones:
+      import { useRouteMatch, Link } from 'react-router-dom';
+      import { FiChevronLeft, FiChevronRight } from 'react-icons/fi';
       import { Header } from './styles';
       import logoImg from '../../assets/logo.svg';
-      import { useRouteMatch, Link } from 'react-router-dom';
 
 - Alteramos o return de <h1> para () e colocamos o Header, logo, Link dentro:
     const Repository: React.FC = () => {

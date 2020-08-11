@@ -38,7 +38,6 @@ export const RepositoryInfo = styled.section`
     }
 
     div {
-      max-width: 960px;
       margin-left: 24px;
 
       strong {
@@ -47,7 +46,7 @@ export const RepositoryInfo = styled.section`
       }
 
       p {
-        font-size: 20px;
+        font-size: 18px;
         color: #737380;
         margin-top: 4px;
       }
