@@ -81,6 +81,151 @@
 
     export default App;
 
+- Instalar os ícones e polished para cores:
+    yarn add react-icons 
+    yarn add polished
 - Execute o projeto:
     yarn start
 
+- Vamos criar 2 componentes para a tela de login dividindo o form da imagem:
+  - Vamos deixar criado os estilos em src/pages/SignIn/styles.tsx:
+      import styled from 'styled-components';
+
+      export const Container = styled.div``;
+      export const Content = styled.div``;
+      export const Background = styled.div``;
+
+  - Em src/pages/SignIn/index.tsx:
+      import React from 'react';
+      import { Container, Content, Background } from './styles';
+      import { FiLogIn } from 'react-icons/fi';
+      import logoImg from '../../assets/logo.svg';
+
+      const SignIn: React.FC = () => (
+        <Container>
+          <Content>
+            <img src={logoImg} alt="GoBarber" />
+            <form>
+              <h1>Faça seu login</h1>
+              <input placeholder="E-mail" />
+              <input type="password" placeholder="Senha" />
+              <button type="submit">Entrar</button>
+              <a href="forgot">Esqueci minha senha</a>
+            </form>
+            <a href="login">
+              <FiLogIn />
+              Criar conta
+              </a>
+          </Content>
+          <Background />
+        </Container>
+      );
+
+      export default SignIn;
+
+EXPLICANDO CSS
+==============
+- Em src/pages/SignIn/styles.tsx:
+    import styled from 'styled-components';
+    import { shade } from 'polished';
+    import signInBackgroundImg from '../../assets/sign-in-background.png';
+
+    styled-components: para usar os estilos como componentes
+    shade: facilita trabalhar com cores, exemplo para o botão ficar mais escuro
+    signInBackgroundImg: imagem salva na pasta assets
+
+    export const Container = styled.div`
+      height: 100vh;  ocupa toda a altura da área visualizada
+      display: flex;  um componente ao lado do outro
+      align-items: stretch; para todos os componentes terem height: 100vh
+    `;
+
+    export const Content = styled.div`
+      display: flex;  um componente ao lado do outro
+      flex-direction: column; para os componentes ficarem abaixo um do outro
+      align-items: center; alinhar os itens ao centro
+      place-content: center;  todo o conteúdo dos eixos "x" e "y" ficará ao centro
+                              o mesmo que justify-content: center e align-items: center
+      width: 100%;  ocupará o máximo da tela exceto a imagem Background ao lado
+      max-width: 700px; ocupará no máximo 700px
+      Isso quer dizer que a imagem Background completará o restante da tela com flex: 1 para isso. Nunca reduzirá o tamanho do conteúdo e nunca ultrapassará 700px.
+
+      form {
+        margin: 80px 0; distanciar em cima e abaixo do restante
+        width: 340px; para ficar um pouco menor
+        text-align: center; alinhar os itens ao centro
+        
+        h1 {
+          margin-bottom: 24px;  distanciar abaixo
+        }
+
+        input {
+          background: #232129;  cor de fundo
+          border-radius: 10px;  borda arredondada
+          border: 2px solid #232129;  borda que será enfatizada
+          padding: 16px;  distanciar internamente
+          width: 100%;  ocupar o máximo que puder
+          color:#f4ede8;  cor do texto a ser digitado do input
+
+          &::placeholder {
+            color: #666360; cor do placeholder
+          }
+
+          & + input { todo input precedido por outro, ou seja, menos o primeiro
+            margin-top: 8px;  margem para distanciar do outro input acima
+          }
+        }
+
+        button {
+          background: #FF9000;  cor de fundo
+          height: 56px; tamanho fixo
+          border-radius: 10px; borda arredondada
+          border: 0; sem borda
+          padding: 0 16px; distanciar internamente
+          color: #312e38; cor do texto do botão
+          width: 100%;  ocupar o máximo que puder
+          font-weight: 500; "meio negrito"
+          margin-top: 16px; distanciar acima
+          transition: background-color 0.2s;  mudar gradualmente a cor
+          
+          &:hover {
+            background: ${shade(0.2, '#FF9000')}; shade para botão ficar 0.2 (20%) mais escuro 
+          }
+        }
+
+        a {
+          color: #f4ede8;
+          display: block; ocupa toda a linha
+          margin-top: 24px;
+          text-decoration: none;  sem sublinhado
+          transition: color 0.2s; mudar gradualmente a cor
+
+          &:hover {
+            color: ${shade(0.2, '#f4ede8')}; shade para link ficar 0.2 (20%) mais escuro 
+          }
+        }
+      }
+
+      > a {   somente a que estiverem diretamente no form e não dentro de outro componente
+        color: #FF9000;
+        margin-top: 24px;
+        text-decoration: none;  sem sublinhado
+        transition: color 0.2s; mudar gradualmente a cor
+        display: flex;  um componente ao lado do outro
+        align-items: center;
+
+        svg {
+          margin-right: 16px;
+        }
+
+        &:hover {
+          color: ${shade(0.2, '#FF9000')};
+        }
+      }
+    `;
+
+    export const Background = styled.div`
+      flex: 1;  ocupará todo o espaço menos os 700px do Content
+      background: url(${signInBackgroundImg}) no-repeat center; a imagem de fundo importada
+      background-size: cover; para não ficar com espaços em volta, ocupando todo o espaço que sobrou
+    `;
