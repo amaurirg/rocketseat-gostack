@@ -214,7 +214,7 @@ EXPLICANDO CSS
         display: flex;  um componente ao lado do outro
         align-items: center;
 
-        svg {
+        svg {   estilo do ícone
           margin-right: 16px;
         }
 
@@ -229,3 +229,418 @@ EXPLICANDO CSS
       background: url(${signInBackgroundImg}) no-repeat center; a imagem de fundo importada
       background-size: cover; para não ficar com espaços em volta, ocupando todo o espaço que sobrou
     `;
+
+
+ISOLANDO COMPONENTES
+====================
+Como usaremos input e button em vários locais, a melhor forma de reaproveitarmos é separando esses componentes, transformando-os em globais.
+
+Criaremos uma pasta components e dentro cada componente terá dois arquivos: um index e um style.
+- Em src/components temos:
+    Input
+      index.tsx
+      styles.css
+    Button
+      index.tsx
+      styles.css
+
+- Em src/components/Input/index.tsx:
+    import React, { InputHTMLAttributes } from 'react';
+    import { Container } from './styles';
+
+    interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
+      name: string;
+    }
+
+    const Input: React.FC<InputProps> = () => (
+      <Container>
+        <input type="text" />
+      </Container>
+    );
+
+    export default Input;
+
+  Importamos InputHTMLAttributes que contém os atributos do <input> do HTML.
+  Importamos Container para o estilo.
+  Criamos uma interface para utilizarmos esses atributos e incluir o name como obrigatório, pode ver que não tem interrogação (name?: string). Extendemos de InputHTMLAttributes que tem como parâmetro HTMLInputElement.
+  Passamos a interface como parâmetro ao componente para que o mesmo tenha todos os atributos que o <input> do HTML tem.
+
+
+- Em src/components/Input/styles.ts:
+    import styled from 'styled-components';
+
+    export const Container = styled.div``;
+
+
+- Em src/components/Button/index.tsx:
+    import React, { ButtonHTMLAttributes } from 'react';
+
+    type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement>;
+
+    const button: React.FC<ButtonProps> = () => <button type="button">teste</button>;
+
+    export default button;
+
+  Importamos ButtonHTMLAttributes que contém os atributos do <input> do HTML.
+  Não precisamos criar interface no caso do button porque nosso componente não terá novas propriedades e não vamos sobrescrever nenhum atributo já existente desse elemento HTML, ou seja, será uma interface vazia. Para isso faremos uma forma simplificada com type que é uma forma de criarmos tipagem de objetos que são compostas de outra tipagem.
+  Passamos a interface como parâmetro ao componente para que o mesmo tenha todos os atributos que o <button> do HTML tem. Poderíamos passar diretamente ButtonHTMLAttributes<HTMLButtonElement> mas ficaria muito grande e por isso uma boa prática é criar um type e passá-lo como parâmetro.
+
+
+- Em src/components/Button/styles.ts:
+    import styled from 'styled-components';
+
+    export const Container = styled.button``;
+  
+  Aqui não é <div> e sim <button>
+
+Passamos as props dos nossos componentes:
+  - Em src/components/Input/index.tsx:
+      const Input: React.FC<InputProps> = (props) => (
+        <Container>
+          <input {...props} />
+        </Container>
+      );
+  
+  - Em src/components/Button/index.tsx:
+      const button: React.FC<ButtonProps> = (props) => <button type="button" {...props}>teste</button>;
+    
+    Agora precisamos pegar o texto "Entrar" do button. Vamos alterar a linha acima:
+      const button: React.FC<ButtonProps> = ({ children, ...rest }) => (
+        <button type="button" {...rest}>
+          {children}
+        </button>);
+
+    Pegamos o texto do button utilizando desestruturação com children e todas as outras propriedades que vierem ficarão em ...rest e passamos o nome do button com children.
+
+    OBS: Em projetos que não estejam utilizando Typescript, o eslint dará um erro informando que o eslint vem junto com a necessidade de adicionar tipagem estática com a bilioteca react/prop-types mas isso só faz sentido se não estiver usando Typescript porque o mesmo já faz isso.
+
+    - Importamos o Container e substituímos <button> por <Container>:
+        import React, { ButtonHTMLAttributes } from 'react';
+        import { Container } from './styles';
+
+        type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement>;
+
+        const button: React.FC<ButtonProps> = ({ children, ...rest }) => (
+          <Container type="button" {...rest}>
+            {children}
+          </Container>);
+
+        export default button;
+
+Agora nos campos de input deveremos inserir os ícones e ajustar a margem:
+- Em src/pages/SignIn/index.tsx:
+    import { FiLogIn, FiMail, FiLock } from 'react-icons/fi';
+
+    <Input name="email" icon={FiMail} placeholder="E-mail" />
+    <Input name="password" icon={FiLock} type="password" placeholder="Senha" />
+
+  Isso gerará um erro porque precisamos informar na interface a tipagem dos icons:
+  - Em src/components/Input/index.tsx:
+      icons: React.ComponentType;
+
+    O tipo de icon é um componente (FiMail e FiLock) e o React tem uma propriedade chamada ComponentType para receber esse componente como propriedade.
+
+    Precisamos receber as propriedades, inclusive os ícones. Precisamos informar ao React um outro nome porque ele não reconhece <icon> como componente. Então passamos icon: Icon:
+      const Input: React.FC<InputProps> = ({icon: Icon, ...rest}) => (
+        <Container>
+          <input {...rest} />
+        </Container>
+      );
+
+    Agora como fazer para que o React saiba as propriedades que Icon Tem quando fizermos <Icon /> ?
+      Por exemplo, se passarmos:
+        icons: React.ComponentType<{ size: string; }>;
+      Conseguimos acessar size em <Icon size={12} />
+      Sendo assim, importaremos as propriedades que um ícone pode ter:
+        import { IconBaseProps } from 'react-icons';
+      
+      Passamos como parâmetro para icons: React.ComponentType; e assim teremos acesso às propriedades de Icon e deixamos icon como opcional (?):
+        icon?: React.ComponentType<IconBaseProps>;
+
+      Fazemos uma verificação se existe o ícone para poder mostrá-lo:
+        {Icon && <Icon size={20} />}
+
+      Agora o ícone aparece, porém fora do input. Vamos colocá-lo dentro:
+        - Vamos mover o input de src/pages/SignIn/styles.ts para src/pages/SignIn/styles.ts:
+          import styled from 'styled-components';
+
+          export const Container = styled.div`
+
+            input {
+              background: #232129;
+              border-radius: 10px;
+              border: 2px solid #232129;
+              padding: 12px;
+              width: 100%;
+              color:#f4ede8;
+
+              &::placeholder {
+                color: #666360;
+              }
+
+              & + input {
+                margin-top: 8px;
+              }
+            }
+          `;
+
+        - Movemos as propriedades do input para o Container:
+            import styled from 'styled-components';
+
+            export const Container = styled.div`
+                background: #232129;
+                border-radius: 10px;
+                border: 2px solid #232129;
+                padding: 12px;
+                width: 100%;
+                color:#f4ede8;
+
+              input {
+
+                &::placeholder {
+                  color: #666360;
+                }
+
+                & + input {
+                  margin-top: 8px;
+                }
+              }
+            `;
+
+        - Alinhamos os icons e os inputs:
+            display: flex;
+            align-items: center;
+
+        - No input adicionamos:
+            flex: 1;
+            background: transparent;
+            border: 0;
+
+        - Como o ícone é opcional, colocaremos a margem nele para distanciar do input:
+            svg {
+              margin-right: 16px;
+            }
+        
+        - Alteramos a cor do Container e do input para ficarem iguais:
+          No Container:
+            color: #666360;
+          No input:
+            color:#f4ede8;
+
+      Ajustaremos as margens dos inputs movendo-a para o Container e o nome para div:
+        & + div {
+          margin-top: 8px;
+        }
+
+Passaremos o estilo do button para seu componente:
+  - Movemos de src/pages/SignIn/styles.ts para src/components/Button/styles.ts:
+      background: #FF9000;
+      height: 46px;
+      border-radius: 10px;
+      border: 0;
+      padding: 0 16px;
+      color: #312e38;
+      width: 100%;
+      font-weight: 500;
+      margin-top: 16px;
+      transition: background-color 0.2s;
+      
+      &:hover {
+        background: ${shade(0.2, '#FF9000')};
+      }
+  
+  - Importamos shade:
+      import { shade } from 'polished';
+
+
+
+*****************************
+* OS ARQUIVOS FICARAM ASSIM *
+*****************************
+
+- Em src/pages/SignIn/index.tsx:
+    import React from 'react';
+    import { Container, Content, Background } from './styles';
+    import { FiLogIn, FiMail, FiLock } from 'react-icons/fi';
+    import logoImg from '../../assets/logo.svg';
+    import Input from '../../components/Input';
+    import Button from '../../components/Button';
+
+    const SignIn: React.FC = () => (
+      <Container>
+        <Content>
+          <img src={logoImg} alt="GoBarber" />
+          <form>
+            <h2>Faça seu login</h2>
+            <Input name="email" icon={FiMail} placeholder="E-mail" />
+            <Input name="password" icon={FiLock} type="password" placeholder="Senha" />
+            <Button type="submit">Entrar</Button>
+            <a href="forgot">Esqueci minha senha</a>
+          </form>
+          <a href="login">
+            <FiLogIn />
+            Criar conta
+          </a>
+        </Content>
+        <Background />
+      </Container>
+    );
+
+    export default SignIn;
+
+- Em src/pages/SignIn/styles.ts:
+    import styled from 'styled-components';
+    import { shade } from 'polished';
+    import signInBackgroundImg from '../../assets/sign-in-background.png';
+
+    export const Container = styled.div`
+      height: 100vh;
+      display: flex;
+      align-items: stretch;
+    `;
+
+    export const Content = styled.div`
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      place-content: center;
+      width: 100%;
+      max-width: 700px;
+
+      form {
+        margin: 40px 0;
+        width: 340px;
+        text-align: center;
+        
+        h2 {
+          margin-bottom: 16px;
+        }
+
+        a {
+          color: #f4ede8;
+          display: block;
+          margin-top: 24px;
+          text-decoration: none;
+          transition: color 0.2s;
+
+          &:hover {
+            color: ${shade(0.2, '#f4ede8')};
+          }
+        }
+      }
+
+      > a {
+        color: #FF9000;
+        margin-top: 24px;
+        text-decoration: none;
+        transition: color 0.2s;
+        display: flex;
+        align-items: center;
+
+        svg {
+          margin-right: 16px;
+        }
+
+        &:hover {
+          color: ${shade(0.2, '#FF9000')};
+        }
+      }
+    `;
+
+    export const Background = styled.div`
+      flex: 1;
+      background: url(${signInBackgroundImg}) no-repeat center;
+      background-size: cover;
+    `;
+
+- Em src/components/Button/index.tsx:
+    import React, { ButtonHTMLAttributes } from 'react';
+    import { Container } from './styles';
+
+    type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement>;
+
+    const button: React.FC<ButtonProps> = ({ children, ...rest }) => (
+      <Container type="button" {...rest}>
+        {children}
+      </Container>);
+
+    export default button;
+
+- Em src/components/Button/styles.ts:
+    import styled from 'styled-components';
+    import { shade } from 'polished';
+
+    export const Container = styled.button`
+      background: #FF9000;
+      height: 46px;
+      border-radius: 10px;
+      border: 0;
+      padding: 0 16px;
+      color: #312e38;
+      width: 100%;
+      font-weight: 500;
+      margin-top: 16px;
+      transition: background-color 0.2s;
+      
+      &:hover {
+        background: ${shade(0.2, '#FF9000')};
+      }
+    `;
+
+- Em src/components/Input/index.tsx:
+    import React, { InputHTMLAttributes } from 'react';
+    import { IconBaseProps } from 'react-icons';
+    import { Container } from './styles';
+
+    interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
+      name: string;
+      icon?: React.ComponentType<IconBaseProps>;
+    }
+
+    const Input: React.FC<InputProps> = ({ icon: Icon, ...rest }) => (
+      <Container>
+        {Icon && <Icon size={20} />}
+        <input {...rest} />
+      </Container>
+    );
+
+    export default Input;
+
+- Em src/components/Input/styles.ts:
+    import styled from 'styled-components';
+
+    export const Container = styled.div`
+        background: #232129;
+        border-radius: 10px;
+        border: 2px solid #232129;
+        padding: 12px;
+        width: 100%;
+        color: #666360;
+
+        display: flex;
+        align-items: center;
+
+        & + div {
+          margin-top: 8px;
+        }
+
+      input {
+        flex: 1;
+        background: transparent;
+        border: 0;
+        color:#f4ede8;
+
+        &::placeholder {
+          color: #666360;
+        }
+
+      }
+      svg {
+        margin-right: 16px;
+      }
+    `;
+
+********************
+* FIM DOS ARQUIVOS *
+********************
+
