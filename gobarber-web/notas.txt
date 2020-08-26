@@ -644,3 +644,147 @@ Passaremos o estilo do button para seu componente:
 * FIM DOS ARQUIVOS *
 ********************
 
+
+UTLIZANDO UNFORM
+================
+
+Quando utilizamos estados, toda vez que um componente sofre alteração, o componente é renderizado e mostrado novamente. No caso do <input> temos 3 e cada letra digitada conta como uma alteração, comprometendo a performance. Então utilizaremos o UnForm que é uma biblioteca feita pela Rocketseat.
+
+- Instalar as bibliotecas:
+    yarn add @unform/core @unform/web
+    @unform/core: para web e mobile
+    @unform/web: integração do UnForm para ReactJS pode ser trocado para mobile no React Native
+
+- Em src/pages/SignUp/index.tsx:
+    import { Form } from '@unform/web';
+
+  - Trocamos <form> por <Form>
+
+  - No componente SignUp vamos alterar para colocar o código dentro do return e criar uma função que será executada a partir do <Form>:
+
+      import React from 'react';
+      import { Form } from '@unform/web';
+      import { FiMail, FiLock, FiUser, FiArrowLeft } from 'react-icons/fi';
+      import { Container, Content, Background } from './styles';
+      import logoImg from '../../assets/logo.svg';
+      import Input from '../../components/Input';
+      import Button from '../../components/Button';
+
+      const SignUp: React.FC = () => {
+        function handleSubmit(data: object): void {
+          console.log(data);
+        }
+
+        return (
+          <Container>
+            <Background />
+            <Content>
+              <img src={logoImg} alt="GoBarber" />
+              <Form onSubmit={handleSubmit}>
+                <h2>Faça seu cadastro</h2>
+                <Input name="name" icon={FiUser} placeholder="Nome" />
+                <Input name="email" icon={FiMail} placeholder="E-mail" />
+                <Input name="password" icon={FiLock} type="password" placeholder="Senha" />
+                <Button type="submit">Cadastrar</Button>
+              </Form>
+              <a href="login">
+                <FiArrowLeft />
+              Voltar para login
+            </a>
+            </Content>
+          </Container>
+        );
+      };
+
+      export default SignUp;
+
+    export default SignUp;
+
+Agora precisamos informar quais campos serão monitorados pelo UnForm no submit. Vamos utilizar nosso Input pra fazer a lógica de registro pois ele será utilizado em muitos locais:
+- Em src/components/Input/index.tsx:
+  - Importamos um hook que recebe como parâmetro o nome do campo que retorna várias propriedades:
+    import {useField} from '@unform/core';
+  - Vamos colocar um corpo e colocar o código dentro de um return:
+      import React, { InputHTMLAttributes } from 'react';
+      import {useField} from '@unform/core';
+      import { IconBaseProps } from 'react-icons';
+      import { Container } from './styles';
+
+      interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
+        name: string;
+        icon?: React.ComponentType<IconBaseProps>;
+      }
+
+      const Input: React.FC<InputProps> = ({ icon: Icon, ...rest }) => {
+
+        return (
+          <Container>
+            {Icon && <Icon size={20} />}
+            <input {...rest} />
+          </Container>
+        );
+      };
+
+      export default Input;
+
+  - Pegamos esses dados do campo:
+      const { fieldName, defaultValue, error, registerField } = useField(name);
+
+      registerField: é o registro que precisamos fazer assim que o input for exibido em tela com useEffect.
+  
+  - Vamos importar useEffect e utilizá-la. Deixaremos o arquivo assim por enquanto:
+      import React, { InputHTMLAttributes, useEffect, useRef } from 'react';
+      import { useField } from '@unform/core';
+      import { IconBaseProps } from 'react-icons';
+      import { Container } from './styles';
+
+      interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
+        name: string;
+        icon?: React.ComponentType<IconBaseProps>;
+      }
+
+      const Input: React.FC<InputProps> = ({ name, icon: Icon, ...rest }) => {
+        const inputRef = useRef(null);
+        const { fieldName, defaultValue, error, registerField } = useField(name);
+
+        useEffect(() => {
+          registerField({
+            name: fieldName,
+            ref: inputRef.current,
+            path: 'value',
+          });
+        }, [fieldName, registerField]);
+
+        return (
+          <Container>
+            {Icon && <Icon size={20} />}
+            <input ref={inputRef} {...rest} />
+          </Container>
+        );
+      };
+
+      export default Input;
+
+    Explicando:
+
+          
+
+      Assim que o componente for exibido em tela chamamos registerField que recebe algumas propriedades.
+        name: nome do campo (fieldName)
+        ref:  no React são formas de acessar o elemento de uma forma direta sem precisar armazenar 
+              em um estado por exemplo. Seria como document.querySelector('input')
+              Para isso importamos useRef e criamos a referência com valor inicial nulo:
+                const inputRef = useRef(null);
+              - Passamos a referência no input:
+                <input ref={inputRef} {...rest} />
+              Isso associa o input com useRef, ou seja, se acessarmos inputRef teremos acesso ao elemento na DOM como se estivesse usando um JS normal.
+              inputRef tem a propriedade current onde fica o input.
+        path: de onde o UnForm vai buscar, dentro de ref, o valor do input. Seria como:
+              document.querySelector('input').value
+        [fieldName, registerField]: informamos que estamos utilizando as variáveis
+
+        No momento que demos o submit, o unForm foi em cada um dos inputs que foram registrados, acessou o elemento e pegou os valores(value)
+
+  Se preenchermos o form de cadastro podemos ver no console.log os dados preenchidos.
+
+
