@@ -1023,3 +1023,311 @@ Agora, quando preenchermos o input e sairmos dele o ícone ficará laranja e se 
 ********************
 
 
+
+VALIDAÇÃO DO FORMULÁRIO DE CADASTRO
+===================================
+
+- Instalar a biblioteca para validação de formulários:
+    yarn add yup
+    yarn add @types/yup -D
+
+Podemos importar yup de duas formas: por validação de cada item como validação de e-mail, validação de mínimo de tamanho, etc ou tudo. Importaremos tudo que tem dentro de yup como uma variável chamada Yup:
+  import * as Yup from 'yup';
+
+-Em src/pages/SignUp/index.tsx:
+  Substituiremos:
+    const SignUp: React.FC = () => {
+      function handleSubmit(data: object): void {
+        console.log(data);
+      }
+
+  Por:
+    const SignUp: React.FC = () => {
+      const handleSubmit = useCallback(async (data: object) => {
+        try {
+          const schema = Yup.object().shape({
+            name: Yup.string().required('Nome obrigatório'),
+            email: Yup.string().required('E-mail obrigatório').email('Digite um e-mail válido'),
+            password: Yup.string().min(6, 'No mínimo 6 dígitos'),
+          });
+
+          await schema.validate(data, {
+            abortEarly: false,
+          });
+        } catch (err) {
+          console.log(err);
+        }
+      }, []);
+
+  schema: quando queremos validar um objeto inteiro
+  Yup.object: os dados que estamos recebendo para validar estarão no formato de objeto
+  shape: a forma como serão os dados
+    name: Yup.string().required() => tipo string e obrigatório
+      Se colocarmos o ponto no required veremos os tipos de validação que podemos fazer
+    email: ... .email() => garante que terá @, domínio e TLD’s (categorias dos sites)
+    password: Yup.string().min(6) => obrigatório no mínimo 6 dígitos
+  
+  await schema.validate(data, {
+    abortEarly: false,
+  });
+
+  validate: valida os dados
+  data: os dados vindos do input (nome, email e senha)
+  abortEarly: false => como yup retorna por padrão apenas o primeiro erro na validação, colocamos isso para que ele mostre todos os campos com erro.
+
+  Transformamos a função para arrow function, usamos o useCallback, async/await e tiramos o void.
+
+
+
+PASSANDO OS ERROS PARA DENTRO DO INPUT
+======================================
+
+Conseguimos chamar algumas funções do formulário para setar ou buscar um valor ou erro de forma dinâmica. Para isso usaremos o conceito de ref do React para termos acesso direto ao formulário.
+- Importamos useRef do React:
+    import React, { useCallback, useRef } from 'react';
+
+- Criamos uma variável para usar o useRef e imprimir no console para ver o retorno:
+    const formRef = useRef(null);
+    console.log(formRef);
+
+    Resposta:
+
+      current:
+        clearField: ƒ (r)         => limpar um campo
+        getData: ƒ ()             => pegar todos os dados do formulário
+        getErrors: ƒ ()           => pegar todos os erros do formulário
+        getFieldError: ƒ (r)      => pegar o erro de um input específico
+        getFieldRef: ƒ (r)        => pegar a referência de um campo específico
+        getFieldValue: ƒ (r)      => pegar o valor de um input específico
+        reset: ƒ (r)              => resetar o formulário
+        setData: ƒ (r)            => setar todos os dados dentro de um campo
+        setErrors: ƒ (r)          => setar todos os erros do formulário
+        setFieldError: ƒ (r, n)   => setar o erro de um input específico
+        setFieldValue: ƒ (r, n)   => setar o valor de um input específico
+        submitForm: ƒ ()          => realizar um submit
+
+
+- Passamos formRef para o <Form>:
+    <Form ref={formRef} onSubmit={handleSubmit}>
+
+Se tentarmos acessar as propriedades de formRef.current não conseguiremos acessar essas funções acima. 
+- Precisamos importar FormHandles que é uma interface que tem todas essas tipagens:
+    import { FormHandles } from '@unform/core';
+
+- Passamos o retorno para useRef:
+    const formRef = useRef<FormHandles>(null);
+
+  Agora em formRef.current. teremos acesso às tipagens.
+
+Só para testarmos vamos colocar um erro estático dentro do catch:
+  catch (err) {
+    formRef.current?.setErrors({
+      name: 'Nome obrigatório',
+    })
+  }
+
+- Em src/components/Input/index.tsx apenas colocamos no fim do Container, abaixo do <input>:
+    {error}
+
+- Voltando ao src/pages/SignUp/index.tsx:
+    Vamos colocar um console.log(err) para entender:
+      ValidationError {name: "ValidationError", value: {…}, path: undefined, type: undefined, errors: Array(3), …}
+        errors: (3) ["Nome obrigatório", "E-mail obrigatório", "No mínimo 6 dígitos"]
+        inner: Array(3)
+          0: ValidationError {name: "ValidationError", value: "", path: "name", type: "required", errors: Array(1), …}
+          1: ValidationError {name: "ValidationError", value: "", path: "email", type: "required", errors: Array(1), …}
+          2: ValidationError {name: "ValidationError", value: "", path: "password", type: "min", errors: Array(1), …}
+          length: 3
+          __proto__: Array(0)
+        message: "3 errors occurred"
+        name: "ValidationError"
+        path: undefined
+        type: undefined
+        value: {name: "", email: "", password: ""}
+        stack: "ValidationError: 3 errors occurred↵    at http://localhost:3000/static/js/1.chunk.js:64368:30↵    at async http://localhost:3000/static/js/main.chunk.js:344:7"
+        __proto__: Error
+
+    Ele retorna inner dentro do ValidationError com os campos abaixo:
+        path: o caminho para o erro
+        message: a mensagem do erro 
+
+- Vamos criar um objeto para cada um dos erros que estão contidos dentro do inner e pegar o name e message. Como usaremos isso várias vezes, criaremos src/utils/getValidationErrors.ts:
+  Se colocarmos como retorno dessa forma (Error padrão do JS) não teremos acesso a todos os campos. Então precisamos utilizar o ValidationError do yup:
+    - Importamos:
+        import { ValidationError } from 'yup';
+
+    - Colocamos no retorno:
+        export default function getValidationErrors(err: ValidationError) {
+        }
+
+      Agora com err. teremos acesso a todos os campos de ValidationError vistos acima.
+      Qual será o retorno dessa função? Lembrando que o formato será uma chave do tipo string e um valor também do tipo string, criaremos uma interface:
+        interface Errors {
+          [key: string]: string;
+        }
+
+      Criando dessa forma informamos que qualquer chave será do tipo string.
+      key: pode ser qualquer nome e será do tipo string
+    
+    - Criamos uma variável do tipo Errors com valor inicial nulo:
+        const validationErrors: Errors = {};
+
+    - Como inner é um array, vamos percorrê-lo e preencher validationErrors conforme os dados {path: message} e retorná-lo:
+        err.inner.forEach(error => {
+          validationErrors[error.path] = error.message;
+        });
+    
+        return validationErrors;
+
+- Em src/pages/SignUp/index.tsx:
+  - Importamos a função criada:
+      import getValidationErrors from '../../utils/getValidationErrors';
+
+  - Alteramos o catch para ficar dinâmico:
+      catch (err) {
+        const errors = getValidationErrors(err);
+        formRef.current?.setErrors(errors);
+      }
+
+  - Precisamos fazer com que ele sempre faça a validação do zero no início da função:
+      formRef.current?.setErrors({});
+
+Agora já temos as mensagens aparecendo nos inputs.
+
+
+
+*****************************
+* OS ARQUIVOS FICARAM ASSIM *
+*****************************
+
+- Em src/pages/SignUp/index.tsx:
+    import React, { useCallback, useRef } from 'react';
+    import { FormHandles } from '@unform/core';
+    import { Form } from '@unform/web';
+    import { FiMail, FiLock, FiUser, FiArrowLeft } from 'react-icons/fi';
+    import * as Yup from 'yup';
+    import getValidationErrors from '../../utils/getValidationErrors';
+    import { Container, Content, Background } from './styles';
+    import logoImg from '../../assets/logo.svg';
+    import Input from '../../components/Input';
+    import Button from '../../components/Button';
+
+    const SignUp: React.FC = () => {
+      const formRef = useRef<FormHandles>(null);
+      console.log(formRef);
+
+      const handleSubmit = useCallback(async (data: object) => {
+        try {
+          formRef.current?.setErrors({});
+          const schema = Yup.object().shape({
+            name: Yup.string().required('Nome obrigatório'),
+            email: Yup.string().required('E-mail obrigatório').email('Digite um e-mail válido'),
+            password: Yup.string().min(6, 'No mínimo 6 dígitos'),
+          });
+
+          await schema.validate(data, {
+            abortEarly: false,
+          });
+        } catch (err) {
+            const errors = getValidationErrors(err);
+            formRef.current?.setErrors(errors);
+        }
+      }, []);
+
+      return (
+        <Container>
+          <Background />
+          <Content>
+            <img src={logoImg} alt="GoBarber" />
+            <Form ref={formRef} onSubmit={handleSubmit}>
+              <h2>Faça seu cadastro</h2>
+              <Input name="name" icon={FiUser} placeholder="Nome" />
+              <Input name="email" icon={FiMail} placeholder="E-mail" />
+              <Input name="password" icon={FiLock} type="password" placeholder="Senha" />
+              <Button type="submit">Cadastrar</Button>
+            </Form>
+            <a href="login">
+              <FiArrowLeft />
+            Voltar para login
+          </a>
+          </Content>
+        </Container>
+      );
+    };
+
+    export default SignUp;
+
+- Em src/components/Input/index.tsx:
+    import React, { InputHTMLAttributes, useEffect, useRef, useState, useCallback } from 'react';
+    import { useField } from '@unform/core';
+    import { IconBaseProps } from 'react-icons';
+    import { Container } from './styles';
+
+    interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
+      name: string;
+      icon?: React.ComponentType<IconBaseProps>;
+    }
+
+    const Input: React.FC<InputProps> = ({ name, icon: Icon, ...rest }) => {
+      const inputRef = useRef<HTMLInputElement>(null);
+      const [isFocused, setIsFocused] = useState(false);
+      const [isFilled, setIsFilled] = useState(false);
+      const { fieldName, defaultValue, error, registerField } = useField(name);
+
+      const handleInputFocus = useCallback(() => {
+        setIsFocused(true);
+      }, []);
+
+      const handleInputBlur = useCallback(() => {
+        setIsFocused(false)
+
+        setIsFilled(!!inputRef.current?.value);
+      }, []);
+
+      useEffect(() => {
+        registerField({
+          name: fieldName,
+          ref: inputRef.current,
+          path: 'value',
+        });
+      }, [fieldName, registerField]);
+
+      return (
+        <Container isFilled={isFilled} isFocused={isFocused}>
+          {Icon && <Icon size={20} />}
+          <input
+            onFocus={handleInputFocus}
+            onBlur={handleInputBlur}
+            defaultValue={defaultValue}
+            ref={inputRef}
+            {...rest} />
+
+            {error}
+        </Container>
+      );
+    };
+
+    export default Input;
+
+- Em src/utils/getValidationErrors.ts:
+    import { ValidationError } from 'yup';
+
+    interface Errors {
+      [key: string]: string;
+    }
+
+    export default function getValidationErrors(err: ValidationError): Errors {
+      const validationErrors: Errors = {};
+
+      err.inner.forEach(error => {
+        validationErrors[error.path] = error.message;
+      });
+
+      return validationErrors;
+    }
+
+
+********************
+* FIM DOS ARQUIVOS *
+********************
+
