@@ -1034,48 +1034,48 @@ VALIDAÇÃO DO FORMULÁRIO DE CADASTRO
 Podemos importar yup de duas formas: por validação de cada item como validação de e-mail, validação de mínimo de tamanho, etc ou tudo. Importaremos tudo que tem dentro de yup como uma variável chamada Yup:
   import * as Yup from 'yup';
 
--Em src/pages/SignUp/index.tsx:
-  Substituiremos:
-    const SignUp: React.FC = () => {
-      function handleSubmit(data: object): void {
-        console.log(data);
-      }
-
-  Por:
-    const SignUp: React.FC = () => {
-      const handleSubmit = useCallback(async (data: object) => {
-        try {
-          const schema = Yup.object().shape({
-            name: Yup.string().required('Nome obrigatório'),
-            email: Yup.string().required('E-mail obrigatório').email('Digite um e-mail válido'),
-            password: Yup.string().min(6, 'No mínimo 6 dígitos'),
-          });
-
-          await schema.validate(data, {
-            abortEarly: false,
-          });
-        } catch (err) {
-          console.log(err);
+- Em src/pages/SignUp/index.tsx:
+    Substituiremos:
+      const SignUp: React.FC = () => {
+        function handleSubmit(data: object): void {
+          console.log(data);
         }
-      }, []);
 
-  schema: quando queremos validar um objeto inteiro
-  Yup.object: os dados que estamos recebendo para validar estarão no formato de objeto
-  shape: a forma como serão os dados
-    name: Yup.string().required() => tipo string e obrigatório
-      Se colocarmos o ponto no required veremos os tipos de validação que podemos fazer
-    email: ... .email() => garante que terá @, domínio e TLD’s (categorias dos sites)
-    password: Yup.string().min(6) => obrigatório no mínimo 6 dígitos
-  
-  await schema.validate(data, {
-    abortEarly: false,
-  });
+    Por:
+      const SignUp: React.FC = () => {
+        const handleSubmit = useCallback(async (data: object) => {
+          try {
+            const schema = Yup.object().shape({
+              name: Yup.string().required('Nome obrigatório'),
+              email: Yup.string().required('E-mail obrigatório').email('Digite um e-mail válido'),
+              password: Yup.string().min(6, 'No mínimo 6 dígitos'),
+            });
 
-  validate: valida os dados
-  data: os dados vindos do input (nome, email e senha)
-  abortEarly: false => como yup retorna por padrão apenas o primeiro erro na validação, colocamos isso para que ele mostre todos os campos com erro.
+            await schema.validate(data, {
+              abortEarly: false,
+            });
+          } catch (err) {
+            console.log(err);
+          }
+        }, []);
 
-  Transformamos a função para arrow function, usamos o useCallback, async/await e tiramos o void.
+    schema: quando queremos validar um objeto inteiro
+    Yup.object: os dados que estamos recebendo para validar estarão no formato de objeto
+    shape: a forma como serão os dados
+      name: Yup.string().required() => tipo string e obrigatório
+        Se colocarmos o ponto no required veremos os tipos de validação que podemos fazer
+      email: ... .email() => garante que terá @, domínio e TLD’s (categorias dos sites)
+      password: Yup.string().min(6) => obrigatório no mínimo 6 dígitos
+    
+    await schema.validate(data, {
+      abortEarly: false,
+    });
+
+    validate: valida os dados
+    data: os dados vindos do input (nome, email e senha)
+    abortEarly: false => como yup retorna por padrão apenas o primeiro erro na validação, colocamos isso para que ele mostre todos os campos com erro.
+
+    Transformamos a função para arrow function, usamos o useCallback, async/await e tiramos o void.
 
 
 
@@ -1151,33 +1151,34 @@ Só para testarmos vamos colocar um erro estático dentro do catch:
         path: o caminho para o erro
         message: a mensagem do erro 
 
-- Vamos criar um objeto para cada um dos erros que estão contidos dentro do inner e pegar o name e message. Como usaremos isso várias vezes, criaremos src/utils/getValidationErrors.ts:
-  Se colocarmos como retorno dessa forma (Error padrão do JS) não teremos acesso a todos os campos. Então precisamos utilizar o ValidationError do yup:
-    - Importamos:
-        import { ValidationError } from 'yup';
+- Vamos criar um objeto para cada um dos erros que estão contidos dentro do inner e pegar o name e message. Como usaremos isso várias vezes, criaremos um novo arquivo:
+- Em src/utils/getValidationErrors.ts:
+    Se colocarmos como retorno dessa forma (Error padrão do JS) não teremos acesso a todos os campos. Então precisamos utilizar o ValidationError do yup:
+      - Importamos:
+          import { ValidationError } from 'yup';
 
-    - Colocamos no retorno:
-        export default function getValidationErrors(err: ValidationError) {
-        }
+      - Colocamos no retorno:
+          export default function getValidationErrors(err: ValidationError) {
+          }
 
-      Agora com err. teremos acesso a todos os campos de ValidationError vistos acima.
-      Qual será o retorno dessa função? Lembrando que o formato será uma chave do tipo string e um valor também do tipo string, criaremos uma interface:
-        interface Errors {
-          [key: string]: string;
-        }
+        Agora com err. teremos acesso a todos os campos de ValidationError vistos acima.
+        Qual será o retorno dessa função? Lembrando que o formato será uma chave do tipo string e um valor também do tipo string, criaremos uma interface:
+          interface Errors {
+            [key: string]: string;
+          }
 
-      Criando dessa forma informamos que qualquer chave será do tipo string.
-      key: pode ser qualquer nome e será do tipo string
-    
-    - Criamos uma variável do tipo Errors com valor inicial nulo:
-        const validationErrors: Errors = {};
+        Criando dessa forma informamos que qualquer chave será do tipo string.
+        key: pode ser qualquer nome e será do tipo string
+      
+      - Criamos uma variável do tipo Errors com valor inicial nulo:
+          const validationErrors: Errors = {};
 
-    - Como inner é um array, vamos percorrê-lo e preencher validationErrors conforme os dados {path: message} e retorná-lo:
-        err.inner.forEach(error => {
-          validationErrors[error.path] = error.message;
-        });
-    
-        return validationErrors;
+      - Como inner é um array, vamos percorrê-lo e preencher validationErrors conforme os dados {path: message} e retorná-lo:
+          err.inner.forEach(error => {
+            validationErrors[error.path] = error.message;
+          });
+      
+          return validationErrors;
 
 - Em src/pages/SignUp/index.tsx:
   - Importamos a função criada:
@@ -1330,4 +1331,403 @@ Agora já temos as mensagens aparecendo nos inputs.
 ********************
 * FIM DOS ARQUIVOS *
 ********************
+
+
+Melhorando as informações de erro no formulário.
+
+Vamos colocar uma borda vermelha no input quando tiver um erro.
+
+- Em src/components/Input/index.tsx passamos uma propriedade para o Container:
+    <Container isErrored={!!error} ...>
+
+  Se tiver um erro ficará true e caso contrário false.
+
+- Em src/components/Input/styles.ts:
+  - Incluímos na interface:
+      isErrored: boolean;
+
+  - Colocamos o estilo do isErrored acima de isFocused e isFilled:
+      ${(props) =>
+        props.isErrored && css`
+          border-color: #c53030;
+      `}
+
+Colocando um ícone no lado direito da mensagem e quando o mouse for passado por cima dele mostrará a mensagem de erro:
+- Importamos o ícone:
+    import { FiAlertCircle } from 'react-icons/fi';
+
+- Em src/components/Input/index.tsx precisamos informar se tiver um erro mostrar a mensagem:
+    {error && <FiAlertCircle color="#c53030" size={20} />}
+
+  Se fizermos dessa forma o ícone não ficará totalmente à direita porque setamos anteriormente uma margin-right de 16px. Vamos criar um componente <Error> para mostrar a mensagem e o ícone:
+    {error && (
+      <Error>
+        <FiAlertCircle color="#c53030" size={20} />
+      </Error>
+    )}
+
+  Vamos importar de styles.css e já vamos criar os estilos:
+    import { Container, Error } from './styles';
+
+- Em src/components/Input/styles.ts:
+    export const Error = styled.div`
+      height: 20px;
+      margin-left: 16px;
+      
+      svg {
+        margin:0;
+      }
+    `;
+
+  height: para fixar o tamanho pois aumenta com a borda e não queremos isso
+  margin-left: para que o texto do input não fique por trás do ícone
+  svg: margin => para o ícone ficar a direita, retirando o margin-right anterior.
+
+
+TOOLTIP
+=======
+
+Criaremos um componente separado para o tooltip porque usaremos em outros lugares:
+Vamos deixar criado o arquivo de estilo:
+- Em src/components/Tooltip/styles.ts:
+    import styled from 'styled-components';
+
+    export const Container = styled.div``;
+
+- Em src/components/Tooltip/index.tsx:
+  import React from 'react';
+  import { Container } from './styles';
+
+  interface TooltipProps {
+    title: string;
+  }
+
+  const Tooltip: React.FC<TooltipProps> = ({ title, children }) => {
+    return (
+      <Container>
+        {children}
+        <span>{title}</span>
+      </Container>
+    )
+  }
+
+  export default Tooltip;
+
+HERDANDO UMA CLASSE DE UM COMPONENTE PAI
+- Em src/components/Input/styles.ts:
+  - Importamos Tooltip:
+      import Tooltip from '../Tooltip';
+
+  - Ao invés de dizermos que Error é uma <div>, diremos que é um Tooltip:
+      export const Error = styled(Tooltip)`
+        height: 20px;
+        margin-left: 16px;
+        
+        svg {
+          margin:0;
+        }
+      `;
+
+    Dessa forma estamos estilizando um Tooltip, ou seja, ele vai no Tooltip, vai entender que o Tooltip tem o <Container> e essas regras de estilização que colocamos no erro em src/components/Input/styles.ts serão aplicados no <Container> do Tooltip.
+    
+OBS: TEMOS QUE TOMAR CUIDADO COM UMA COISA. A FORMA COMO O STYLED-COMPONENTS USA PARA ENVIAR A ESTILIZAÇÃO DE UM ELEMENTO SUPERIOR PARA UM ELEMENTO INFERIOR (COMO ESTAMOS FAZENDO EM export const Error = styled(Tooltip)`) QUE É QUASE UMA HERANÇA DE ESTILIZAÇÃO, É ATRAVÉS DA CLASSE PORQUE TODAS AS ESTILIZAÇÕES EM STYLED-COMPONENTS SÃO FEITAS ATRAVÉS DE CLASSES. SE INSPECIONARMOS O ELEMENTO INPUT VEREMOS QUE É TUDO FEITO COM CLASSES. CONFORME MUDAMOS O ESTADO DO INPUT MUDA TAMBÉM A CLASSE DELE.
+
+Daí para passarmos para o Tooltip que ele vai poder receber uma estilização de um elemento superior temos que permitir que ele receba o className como opcional(?) do React.
+  - Em src/components/Tooltip/index.tsx:
+      Faremos isso na interface
+        interface TooltipProps {
+          title: string;
+          className?: string;
+        }
+
+      E passamos para o Container:
+        <Container className={className}>
+
+  - Em src/components/Input/index.tsx passamos a propriedade title:
+      <Error title={error}>
+  
+
+ESTILIZANDO O TOOLTIP
+=====================
+
+- Em src/components/Tooltip/styles.ts:
+    position: relative => assim todo position absolute que está dentro desse Container será 
+                          relativo ao Container e não ao restante da tela.
+    position: absolute; => será relativo ao Container e não ao restante da tela
+    opacity: 0; => para ficar escondido quando não tiver mouse por cima
+    transition: opacity 0.4s; => para aparecer gradualmente quando passar o mouse por cima
+    visibility: hidden; => para esconder quando o mouse não estiver exatamente em cima do ícone
+    visibility: visible; => para mostrar quando o mouse estiver exatamente em cima do ícone
+    bottom: calc(100% + 12px); => para o tooltip ficar um pouco para cima da linha do ícone
+    left: 50%; => tooltip começará exatamente acima do ícone
+    transform: translateX(-50%); => tooltip ficará centralizado acima do ícone
+    
+COMO FAZER A SETINHA DO TOOLTIP COM CSS:
+  &::before {
+    content: '';
+    border-style: solid;
+    border-color: #FF9000 transparent;
+    border-width: 6px 6px 0 6px;
+    top: 100%;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+- Em src/components/Input/styles.ts mudaremos o tooltip para vermelho e fonte branca:
+    span {
+      background: #C53030;
+      color: #FFF;
+
+      &::before {
+        border-color: #C53030 transparent;
+      }
+    }
+
+
+*****************************
+* OS ARQUIVOS FICARAM ASSIM *
+*****************************
+
+- Em src/components/Input/index.tsx:
+    import React, { InputHTMLAttributes, useEffect, useRef, useState, useCallback } from 'react';
+    import { useField } from '@unform/core';
+    import { IconBaseProps } from 'react-icons';
+    import { FiAlertCircle } from 'react-icons/fi';
+    import Tooltip from '../Tooltip';
+    import { Container, Error } from './styles';
+
+    interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
+      name: string;
+      icon?: React.ComponentType<IconBaseProps>;
+    }
+
+    const Input: React.FC<InputProps> = ({ name, icon: Icon, ...rest }) => {
+      const inputRef = useRef<HTMLInputElement>(null);
+      const [isFocused, setIsFocused] = useState(false);
+      const [isFilled, setIsFilled] = useState(false);
+      const { fieldName, defaultValue, error, registerField } = useField(name);
+
+      const handleInputFocus = useCallback(() => {
+        setIsFocused(true);
+      }, []);
+
+      const handleInputBlur = useCallback(() => {
+        setIsFocused(false)
+
+        setIsFilled(!!inputRef.current?.value);
+      }, []);
+
+      useEffect(() => {
+        registerField({
+          name: fieldName,
+          ref: inputRef.current,
+          path: 'value',
+        });
+      }, [fieldName, registerField]);
+
+      return (
+        <Container isErrored={!!error} isFilled={isFilled} isFocused={isFocused}>
+          {Icon && <Icon size={20} />}
+          <input
+            onFocus={handleInputFocus}
+            onBlur={handleInputBlur}
+            defaultValue={defaultValue}
+            ref={inputRef}
+            {...rest} />
+
+          {error && (
+            <Error title={error}>
+              <FiAlertCircle color="#c53030" size={20} />
+            </Error>
+          )}
+        </Container>
+      );
+    };
+
+    export default Input;
+
+- Em src/components/Input/styles.ts::
+    import styled, { css } from 'styled-components';
+    import Tooltip from '../Tooltip';
+
+    interface ContainerProps {
+      isFocused: boolean;
+      isFilled: boolean;
+      isErrored: boolean;
+    }
+
+    export const Container = styled.div<ContainerProps>`
+        background: #232129;
+        border-radius: 10px;
+        border: 2px solid #232129;
+        padding: 12px;
+        width: 100%;
+        color: #666360;
+
+        display: flex;
+        align-items: center;
+
+        & + div {
+          margin-top: 8px;
+        }
+
+        ${(props) =>
+          props.isErrored && css`
+            border-color: #c53030;
+        `}
+
+        ${(props) =>
+          props.isFocused && css`
+            color: #ff9000;
+            border-color: #ff9000;
+        `}
+
+        ${(props) =>
+          props.isFilled && css`
+            color: #ff9000;
+        `}
+
+      input {
+        flex: 1;
+        background: transparent;
+        border: 0;
+        color:#f4ede8;
+
+        &::placeholder {
+          color: #666360;
+        }
+
+      }
+      svg {
+        margin-right: 16px;
+      }
+    `;
+
+    export const Error = styled(Tooltip)`
+      height: 20px;
+      margin-left: 16px;
+      
+      svg {
+        margin:0;
+      }
+
+      span {
+        background: #C53030;
+        color: #FFF;
+
+        &::before {
+          border-color: #C53030 transparent;
+        }
+      }
+    `;
+
+- Em src/components/Tooltip/index.tsx:
+    import React from 'react';
+    import { Container } from './styles';
+
+    interface TooltipProps {
+      title: string;
+      className?: string;
+    }
+
+    const Tooltip: React.FC<TooltipProps> = ({ title, className, children }) => {
+      return (
+        <Container className={className}>
+          {children}
+          <span>{title}</span>
+        </Container>
+      )
+    }
+
+    export default Tooltip;
+
+- Em src/components/Tooltip/styles.ts:
+    import styled from 'styled-components';
+
+    export const Container = styled.div`
+      position: relative;
+
+      span {
+        width: 160px;
+        background: #FF9000;
+        padding: 8px;
+        border-radius: 4px;
+        font-size: 14px;
+        font-weight: 500;
+        opacity: 0;
+        transition: opacity 0.4s;
+        visibility: hidden;
+
+        position: absolute;
+        bottom: calc(100% + 12px);
+        left: 50%;
+        transform: translateX(-50%);
+
+        color: #312e38;
+
+        &::before {
+          content: '';
+          border-style: solid;
+          border-color: #FF9000 transparent;
+          border-width: 6px 6px 0 6px;
+          top: 100%;
+          position: absolute;
+          left: 50%;
+          transform: translateX(-50%);
+        }
+      }
+        &:hover span {
+          opacity: 1;
+          visibility: visible;
+        }
+    `;
+
+********************
+* FIM DOS ARQUIVOS *
+********************
+
+
+VALIDAÇÃO DE LOGIN
+==================
+
+Como não temos rotas ainda, voltaremos a mostrar SignIn:
+- Em src/App.tsx:
+    import React from 'react';
+    import SignIn from './pages/SignIn';
+    // import SignUp from './pages/SignUp';
+    import GlobalStyle from './styles/global';
+
+
+    const App: React.FC = () => (
+      <>
+        <SignIn />
+        {/* <SignUp /> */}
+        <GlobalStyle />
+      </>
+    );
+
+    export default App;
+
+- Em src/pages/SignIn/index.tsx:
+  - Importamos:
+      import React, { useCallback, useRef } from 'react';
+      import { FormHandles } from '@unform/core';
+      import { Form } from '@unform/web';
+      import * as Yup from 'yup';
+      import getValidationErrors from '../../utils/getValidationErrors';
+
+  - Trocamos <form> por <Form> e passamos a ref e o onSubmit:
+      <Form ref={formRef} onSubmit={handleSubmit}>
+
+  - Retiramos nome porque não precisamos:
+      name: Yup.string().required('Nome obrigatório'),
+
+
+
+
+
+
+
+
 
