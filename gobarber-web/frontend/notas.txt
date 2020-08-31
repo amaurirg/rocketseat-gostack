@@ -1728,9 +1728,17 @@ Como não temos rotas ainda, voltaremos a mostrar SignIn:
 AUTENTICAÇÃO
 ============
 
+O CORS evita que sites que não sejam confiáveis da nossa aplicação possam acessar o nosso site.
+- Instalar CORS:
+    yarn add cors
 
+- Em backend/src/server.ts:
+  - Importamos CORS:
+      import cors from 'cors';
 
-
+  - Logo abaixo de const app = express();:
+      app.use(cors());
+      
 
 
 
