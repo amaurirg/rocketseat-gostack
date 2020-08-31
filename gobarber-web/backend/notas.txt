@@ -1,0 +1,3094 @@
+- Criar pasta primeiro-pojeto-node
+- Criar package.json:
+  yarn init -y
+- Instalar as dependências:
+  yarn add express
+- Instalar o Typescript. Converteremos o código Typescript em JS em desenvolvimento (-D):
+    yarn add typescript -D
+- Gerar o arquivo tsconfig.json que armazenará as configurações de como o Typescript será executado no projeto.
+    yarn tsc --init
+- Criar pasta src com arquivo server.ts
+    import express from 'express';
+
+    const app = express();
+
+    app.get('/', (request, response) => {
+      return response.json({message: 'Hello World'});
+    })
+
+    app.listen(3333, () => {
+      console.log('Server started on port 3333');
+    });
+- Em tsconfig.json descomente e preencha com as pastas:
+    "outDir": "./dist",
+    "rootDir": "./src",
+- Converta os arquivos ts em js:
+  yarn tsc
+- Em server.ts:
+  import express from 'express';
+  Ficará com erro informando que precisamos instalar o pacote:
+    yarn add @types/express -D
+- Execute o projeto:
+    yarn tsc
+    node dist/server.js
+Para não ter que fazer esses procedimentos instalaremos uma ferramenta que é muito rápida e fará o build (como o tsc) e restart do servidor automaticamente (como o nodemon).
+- Configurar package.json:
+  ... omitido
+    "license": "MIT",
+    "scripts": {
+      "build": "tsc"
+    },
+    "dependencies": {
+  ... omitido
+- Deletar a pasta dist.
+- Instalar o pacote:
+  yarn add ts-node-dev -D
+- Inclua "dev-server" em package.json:
+    ... omitido
+    "license": "MIT",
+      "scripts": {
+        "build": "tsc",
+        "dev:server": "ts-node-dev --transpileOnly --ignore-watch node_modules src/server.ts"
+      },
+      "dependencies": {
+      ... omitido
+    --transpileOnly: para não verificar se o código está correto já que o VSCode faz isso
+    --ignore-watch node_modules: para ignorar a verificação de alteração na pasta node_modules
+- Execute o projeto:
+    yarn dev:server
+
+DEBUG NO VSCODE
+===============
+- Clicar no ícone DEBUG
+- Clicar em create a launch.json file
+    {
+      // Use IntelliSense to learn about possible attributes.
+      // Hover to view descriptions of existing attributes.
+      // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+      "version": "0.2.0",
+      "configurations": [
+        {
+          "type": "node",
+          "request": "launch",
+          "name": "Launch Program",
+          "skipFiles": [
+            "<node_internals>/**"
+          ],
+          "program": "${workspaceFolder}/index.js",
+          "outFiles": [
+            "${workspaceFolder}/**/*.js"
+          ]
+        }
+      ]
+    }
+- Alterar o arquivo launch.json:
+    {
+      // Use IntelliSense to learn about possible attributes.
+      // Hover to view descriptions of existing attributes.
+      // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+      "version": "0.2.0",
+      "configurations": [
+        {
+          "type": "node",
+          "request": "attach",
+          "protocol": "inspector",
+          "restart": true,
+          "name": "Debug",
+          "skipFiles": [
+            "<node_internals>/**"
+          ],
+          "outFiles": [
+            "${workspaceFolder}/**/*.js"
+          ]
+        }
+      ]
+    }
+    O launch só executa a aplicação com o debug. O attach tenta conectar o debug na aplicação.
+- Execute o projeto:
+    yarn dev:server
+    Se tentar debugar agora não irá funcionar porque o debug não está conectado. O protocol inspector serve para essa conexão e tem que especificar --inspect no package.json:
+      "dev:server": "ts-node-dev --inspect --transpileOnly --ignore-watch node_modules src/server.ts"
+- Execute o projeto:
+    yarn dev:server
+  - Clique Run Debug
+    A barra abaixo ficará vermelha, o terminal informará que o debugger está ouvindo e poderemos usar breakpoints.
+  
+
+
+TESTES
+======
+
+Instalar framework de testes Jest
+    npm install jest
+    Iniciar o Jest  
+        npx jest --init
+            Quando perguntar se deseja adicionar um script de teste dentro do package.json para rodar os scripts de teste, responda sim "y"
+            Quando perguntar se deseja executar os scripts no node ou browser, responda node.
+            Quando perguntar se cada coisa que fizer em um teste n�0�0o seja v��lido para outro teste, responda sim "y".
+            Ser�� criado o arquivo jest.config.js
+            Exemplo de teste:
+                describe('Generate Unique ID', () => {
+                    it('should generate an unique ID', () => {
+                        expect(2+2).toBe(4);  // espera-se que 2+2 seja 4
+                    });
+                });
+
+                describe => nome do teste
+                it => descri�0�4�0�0o do teste
+
+Tipos de testes
+    integration:
+        testam fluxo de uma rota inteira da app
+    unit:
+        testam uma fun�0�4�0�0o espec��fica da app de forma muito isolada
+
+Para utilizar vari��veis de ambiente
+    D��vidas sobre vari��veis de ambiente:
+        https://blog.rocketseat.com.br/variaveis-ambiente-nodejs/
+    Instalar cross-env
+        https://github.com/kentcdodds/cross-env
+        npm install cross-env
+    Em knesfile.js:
+      test: {
+        client: 'sqlite3',
+        connection: {
+        filename: './src/database/test.sqlite'
+        },
+        migrations: {
+        directory: './src/database/migrations'
+        },
+        useNullAsDefault: true, // para que os campos do sqlite possam ser nulos por padr�0�0o
+      },
+    Em package.json, teremos uma vari��vel de ambiente dispon��vel com o script "test" :
+        "test": "cross-env NODE_ENV=test jest"
+    Para pegar uma vari��vel de ambiente no node:
+        const env = process.env.NODE_ENV
+
+Instalar supertest (modo dev) para fazer requisi�0�4�0�1es HTTP a api e valida�0�4�0�1es nos testes
+    npm install supertest -D
+
+
+  ROUTES
+  ======
+
+  - Crie src/routes/index.ts:
+      import { Router } from 'express';
+      import appointmentsRouter from './appointments.routes';
+
+      const routes = Router();
+
+      routes.use('/appointments', appointmentsRouter);
+
+      export default routes;
+    
+    Usamos "use" informando onde deverá ser tratada a rota para qualquer método (post, get, etc.).
+    Em appointments.routes.ts criamos um array que recebe os dados de request.body através de appointment.
+    Por enquanto não temos validação de nada, podendo ser adicionado vários com o mesmo horário.
+    
+  - Instalar UUID
+      yarn add uuidv4
+  - Vamos dividir as rotas em arquivos separados.
+    - Crie um arquivo src/routes/appointments.routes.ts:
+      import { Router } from 'express';
+      import { uuid } from 'uuidv4';
+
+      const appointmentsRouter = Router();
+
+      const appointments = [];
+
+      appointmentsRouter.post('/', (request, response) => {
+          const { provider, date } = request.body;
+          const appointment = {
+              id: uuid(),
+              provider,
+              date
+          }
+          appointments.push(appointment)
+          return response.json(appointment);
+      });
+
+      export default appointmentsRouter;
+    
+Informando o tipo para appointments:
+  - Como appointments está com tipo any, precisamos criar uma interface:
+      interface Appointment {
+          id: string,
+          provider: string,
+          date: Date;
+      }
+
+      Para declarar um tipo string temos algumas opções:
+      campo: Array<string>;
+      campo: string[];
+      Se tiver mais de um tipo podemos incluir:
+      campo: Array<string | number>;
+
+  - Declare que esse array é composto pela interface criada:
+      const appointments: Appointment[] = [];
+
+    - Em server.ts:
+      importamos routes para declarar em "app.use(routes)"
+        import express, { response } from 'express';
+        import routes from './routes/appointments.routes';
+
+        const app = express();
+
+        app.use(express.json());
+        app.use(routes);
+
+        app.listen(3333, () => {
+          console.log("Server started on port 3333");
+        })
+
+    
+
+VALIDAÇÃO DE DATAS
+==================    
+  - Instalar DATE FNS para trabalharmos com datas
+      yarn add date-fns
+  - Importe DATE FNS em appointments.routes.ts:
+      import { startOfHour, parseISO } from 'date-fns';
+        parseISO converte uma string em objeto date
+        startOfHour zera os minutos, segundos e milisegundos, deixando a hora no formato T20:00:00.000Z
+  - Declare a variável no formato convertido:
+      const parsedDate = startOfHour(parseISO(date));
+  - Na criação do objeto colocaremos essa data:
+      const appointment = {
+          id: uuid(),
+          provider,
+          date: parsedDate
+      }
+  - Vamos procurar agendamentos com a mesma data:
+      - Importe isEqual para comparar as datas:
+          import { startOfHour, parseISO, isEqual } from 'date-fns';
+  - Percorre o array fazendo a comparação se existe alguma data igual ao que recebemos em request.body:
+      const findAppointmentInSameDate = appointments.find(appointment =>
+          isEqual(parsedDate, appointment.date),
+      );
+  - Se tiver uma data igual retornaremos um erro:
+      if(findAppointmentInSameDate) {
+          return response.status(400).json({message: "This appointment is already booked"});
+      }
+
+
+MODELS
+======
+Toda vez que criarmos um dado que será armazenado na aplicação, criaremos um model.
+- Crie o arquivo src/models/Appointment.ts
+    import { uuid } from 'uuidv4';
+
+    class Appointment {
+        id: string;
+        provider: string;
+        date: Date;
+
+        constructor(provider: string, date: Date) {
+            this.id = uuid();
+            this.provider = provider;
+            this.date = date;
+        }
+    }
+
+    export default Appointment;
+
+    constructor: para passarmos parâmetros em "new Appointment()" para criar o appointment já baseado em algumas informações pré existentes.
+    
+- Em appointments.routes.ts apagamos a interface e importamos o model:
+    import Appointment from '../models/Appointments';
+    A declaração da variável fica igual:
+      const appointments: Appointment[] = [];
+- Substituir a forma de como criamos o objeto:
+    const appointment = {
+        id: uuid(),
+        provider,
+        date: parsedDate
+    }
+    PARA:
+    const appointment = new Appointment(provider, parsedDate);
+- Não precisamos mais de uuid em appointments.routes.ts pois isso é feito agora em models
+
+
+
+REPOSITÓRIOS
+============
+
+Responsável pelo CRUD.
+É a conexão entre Persistência (onde iremos persistir os dados como DB) e a Rota.
+Persistência <-> Repositório <-> Rota
+É um detentor das operações que iremos fazer em cima dos dados da aplicação.
+Sempre que formos armazenar dados, os repositórios serão utilizados para realizarmos as operações em cima deles (CRUD).
+No repositório iremos buscar as informações persistidas em um DB ou variável.
+Podemos ter um find para procurar ou create para criar.
+Normalmente teremos um repositório por model.
+Criaremos um arquivo que será responsável por tudo que irá mexer nos dados de agendamento de alguma forma. Por enquanto a lista de appointments que está em appointments.routes.ts é só uma variável mas futuramente o repositório será o responsável por fazer as operações do banco de dados.
+
+Vamos separar as responsabilidades e passar código de routes para o repositório.
+- Crie o arquivo src/repositories/AppointmentsRepository.ts com o método create:
+    import Appointment from '../models/Appointment';
+
+    class AppointmentsRepository {
+        private appointments: Appointment[];
+
+        constructor() {
+            this.appointments = [];
+        }
+
+        public create(provider: string, date: Date): Appointment {
+            const appointment = new Appointment(provider, date);
+            this.appointments.push(appointment);
+
+            return appointment;
+        }
+    }
+
+    export default AppointmentsRepository;
+
+private: acessível somente pela classe e seus métodos
+public: acessível fora da classe
+constructor: inicializa a variável
+create(): cria o objeto e adiciona em appointments
+public create(provider: string, date: Date): Appointment { ==> precisamos informar o tipo de retorno (Appointment)
+O trecho "const appointment = new Appointment(provider, date);" foi movido de appointments.routes.ts
+
+- Em appointments.routes.ts:
+  - Importamos
+      import AppointmentsRepository from '../repositories/AppointmentsRepository';
+  - Criamos a instância appointmentsRepository de AppointmentsRepository:
+      - Substituir:
+          const appointments: Appointment[] = [];
+        Por:
+          const appointmentsRepository = new AppointmentsRepository();
+  - Chamamos o método create para criarmos o objeto:
+      const appointment = appointmentsRepository.create(provider, parsedDate);
+  - Deletamos o push porque será feito no AppointmentsRepository.ts
+  - Precisamos criar um método público para procurar pelos agendamentos em AppointmentsRepository.ts porque appointments não é acessível (private)
+
+- Em AppointmentsRepository.ts:
+    Passaremos a lógica de appointments.routes.ts para dentro do método findByDate:
+      const findAppointmentInSameDate = appointments.find(appointment =>
+          isEqual(parsedDate, appointment.date),
+      );
+    E faremos as alterações necessárias:
+      public findByDate(date: Date): Appointment | null {
+        const findAppointment = this.appointments.find(appointment =>
+            isEqual(date, appointment.date),
+        );
+        return findAppointment || null;
+      }
+      Informamos o tipo que retornará: Appointment ou nulo
+        public findByDate(date: Date): Appointment | null
+      Retornará findAppointment ou nulo
+        return findAppointment || null;
+
+- Em appointments.routes.ts:
+    - Chamamos o método findByDate passando a data:
+        const findAppointmentInSameDate = appointmentsRepository.findByDate(
+          parsedDate,
+        );
+    - A verificação com "if" continua igual.
+
+Com essas mudanças os arquivos ficaram assim:
+
+- Em appointments.routes.ts:
+    import { Router } from 'express';
+    import { startOfHour, parseISO } from 'date-fns';
+    import AppointmentsRepository from '../repositories/AppointmentsRepository';
+
+    const appointmentsRouter = Router();
+    const appointmentsRepository = new AppointmentsRepository();
+
+    appointmentsRouter.post('/', (request, response) => {
+        const { provider, date } = request.body;
+        const parsedDate = startOfHour(parseISO(date));
+        const findAppointmentInSameDate = appointmentsRepository.findByDate(
+            parsedDate,
+        );
+
+        if (findAppointmentInSameDate) {
+            return response.status(400).json({ message: "This appointment is already booked" });
+        }
+        
+        const appointment = appointmentsRepository.create(provider, parsedDate);
+        return response.json(appointment);
+    });
+
+    export default appointmentsRouter;
+
+- Em AppointmentsRepository.ts:
+    import Appointment from '../models/Appointment';
+    import { isEqual } from 'date-fns';
+
+
+    class AppointmentsRepository {
+        private appointments: Appointment[];
+
+        constructor() {
+            this.appointments = [];
+        }
+
+        public findByDate(date: Date): Appointment | null {
+            const findAppointment = this.appointments.find(appointment =>
+                isEqual(date, appointment.date),
+            );
+            return findAppointment || null;
+        }
+
+        public create(provider: string, date: Date): Appointment {
+            const appointment = new Appointment(provider, date);
+            this.appointments.push(appointment);
+
+            return appointment;
+        }
+    }
+
+    export default AppointmentsRepository;
+
+Recapitulando:
+- Criamos um arquivo src/repositories/AppointmentsRepository.ts responsável por mexer nos dados de agendamento de alguma forma. Então armazenamos os agendamentos dentro dele e qualquer função que for listar, criar, deletar, alterar deverá ficar aqui.
+- src/routes/appointments.routes.ts vai perdendo cada vez mais as responsabilidades de formato de dados (pertence ao model) e a maneira como os dados são armazenados. A rota não deve ter a responsabilidade de se conectar com a fonte de dados da aplicação e sim o repositório.
+
+
+Listando todos os agendamentos:
+- Em AppointmentsRepository.ts criamos o método all para get passando o tipo do retorno. Já que retorna appointments que é do tipo Appointment, informaremos esse tipo:
+    public all(): Appointment[] {
+      return this.appointments;
+    }
+- Em src/routes/appointments.routes.ts criaremos a rota do tipo get:
+    appointmentsRouter.get('/', (request, response) => {
+      const appointments = appointmentsRepository.all();
+      return response.json(appointments);
+    });
+
+DTO - Data Transfer Object
+==========================
+
+Passando dados nomeados para ficar mais claro o que a função recebe.
+Ao invés de passarmos/recebermos parâmetros indicando os tipos na função, criamos uma interface e desestruturamos os dados. Exemplo:
+  - Em AppointmentsRepository.ts:
+    - Criação da interface:
+        interface CreateAppointmentDTO {
+          provider: string;
+
+          date: Date;
+        }
+    - Substituímos:      
+        public create(provider: string, date: Date): Appointment {...
+      Por:
+        public create(data: CreateAppointmentDTO): Appointment {
+          const appointment = new Appointment(data.provider, data.date);
+      Ou com desestruturação:
+        public create({ provider, date }: CreateAppointmentDTO): Appointment {
+      const appointment = new Appointment({ provider, date });
+  - Em appointments.routes.ts passaremos na criação um objeto como parâmetro:
+    - Substituímos:
+        const appointment = appointmentsRepository.create(provider, parsedDate);
+      Por:
+        const appointment = appointmentsRepository.create({
+          provider,
+          date: parsedDate,
+        });
+
+No Typescript existe uma função que serve para NÃO pegarmos alguns dados. 
+  Omit<Tipo, variável que não queremos>
+  - No constructor de Appointments colocaremos o Omit com o tipo Appointment e a variável que não queremos (id):
+      import { uuid } from 'uuidv4';
+
+      class Appointment {
+          id: string;
+          provider: string;
+          date: Date;
+
+          constructor({ provider, date }: Omit<Appointment, "id">) {
+              this.id = uuid();
+              this.provider = provider;
+              this.date = date;
+          }
+      }
+
+      export default Appointment;
+
+Assim quando quisermos adicionar algum campo na classe, o mesmo ficará disponível para o constructor com CTRL + espaço.
+
+  - No método create de AppointmentsRepository:
+      public create({ provider, date }: CreateAppointmentDTO): Appointment {
+        const appointment = new Appointment({ provider, date });
+
+
+
+SERVICES & SOLID
+================
+
+SOLID:
+  - S ingle Responsability Principle
+  - O
+  - L
+  - I
+  - D ependency Inversion
+
+Precisamos separar o código de acordo com as responsabilidades pois as rotas estão sobrecarregadas com códigos que não devem estar nelas. SOC: Separation od Concerns (Separação de preocupações)
+As rotas são responsáveis por:
+  - Receber a requisição
+  - Chamar outro arquivo
+  - Devolver uma resposta
+O que estiver além disso deve ser colocado em outra parte do código.
+
+- Crie uma pasta services em src
+Para a criação de agendamento criaremos um arquivo separado e moveremos parte do código de appointments.routes.ts para ele
+- Crie o arquivo src/services/CreateAppointmentService.ts para armazenar as regras de negócio da aplicação.
+O service sempre terá um único método normalmente chamado de execute ou run. Seria como "estou executando a criação de um novo agendamento".
+  // Responsável pela criação de agendamento
+
+  class CreateAppointmentService {
+    public execute () {
+
+    }
+  }
+
+- Em appointments.routes.ts:
+  - Separando parseISO que está transformando string em objeto de startOfHour que é uma regra de negócio onde zera os minutos, segundos e milisegundos.
+      const parsedDate = startOfHour(parseISO(date));
+    Em:
+      const parsedDate = parseISO(date);
+      const appointmentDate = startOfHour(parsedDate);
+    Agora precisamos alterar a variável que tem o valor de date:
+      const appointment = appointmentsRepository.create({
+        provider,
+        date: appointmentDate,
+      });
+  - Movemos essa parte do código para execute em src/services/CreateAppointmentService.ts:
+      const appointmentDate = startOfHour(parsedDate);
+      const findAppointmentInSameDate = appointmentsRepository.findByDate(
+          parsedDate,
+      );
+
+      if (findAppointmentInSameDate) {
+          return response.status(400).json({ message: "This appointment is already booked" });
+      }
+      
+      const appointment = appointmentsRepository.create({
+          provider,
+          date: appointmentDate,
+      });
+Agora teremos vários erros que precisamos corrigir.
+  - Recebimento das informações
+  - Tratativa de erros e excessões
+  - Acesso ao repositório
+
+- Retornamos appointment:
+    return appointment;
+- Exportamos a classe:
+    export default CreateAppointmentService;
+
+Como execute() receberá os parâmetros como objeto, criaremos uma interface:
+    interface Request {
+      provider: string;
+      date: Data;
+    }
+
+- Informamos com desestruturação os dados que receberemos e o tipo do retorno:
+    Precisamos importar Appointment:
+      import Appointment from '../models/Appointment';
+
+    class CreateAppointmentService {
+      public execute({ date, provider }: Request): Appointment {
+        ... código movido de routes ...
+      }
+    }
+
+- Substituiremos o if para retornar um trow com a mensagem de erro:
+    if (findAppointmentInSameDate) {
+      return response.status(400).json({ message: "This appointment is already booked" });
+    }
+  Para:
+    if (findAppointmentInSameDate) {
+      throw Error("This appointment is already booked");
+    }
+
+Dependency Inversion (SOLID)
+============================
+Se fizermos a declaração abaixo em cada service criaremos repositórios diferentes:
+  const appointmentsRepository = new AppointmentsRepository();
+Para isso utilizaremos um princípio chamado Dependency Inversion (SOLID).
+Sempre que o service tiver uma dependência externa como o caso do AppointmentsRepository, ao invés de instanciarmos a classe de repositório dentro do service nós receberemos o appointmentsRepository como parâmetro do constructor da classe. Isso facilita para que independentemente de quantos services diferentes estejam trabalhando com a parte de appointment todos eles estejam utilizando o mesmo repositório de appointment e não vários criados em services diferentes.
+- Importamos appointmentsRepository para informar o tipo AppointmentsRepository:
+    import AppointmentsRepository from '../repositories/AppointmentsRepository';
+    Serve para quando o parâmetro for uma instância de uma outra classe.
+- Em constructor:
+    - Recebemos o repositório através da variável appointmentsRepository:
+        constructor(appointmentsRepository: AppointmentsRepository){
+- Criamos uma variável privada antes do constructor:
+    private appointmentsRepository: AppointmentsRepository;
+    Inicializamos essa variável no constructor:
+      this.appointmentsRepository = appointmentsRepository;
+
+- Alteramos appointmentsRepository para this.appointmentsRepository.
+- Alteramos parsedDate para appointmentDate.
+- Importamos startOfHour:
+    import { startOfHour } from 'date-fns';
+Por mais que tenhamos criado o constructor temos que passar esse parâmetro em appointments.routes.ts.
+- Em appointments.routes.ts:
+  Importamos CreateAppointmentService:
+    import CreateAppointment from '../services/CreateAppointmentService';
+- Criamos as variáveis abaixo para criar o repositório e passar os parâmetros:
+    const createAppointment = new CreateAppointmentService(
+      appointmentsRepository,
+    );
+    const appointment = createAppointment.execute({date: parsedDate, provider});
+- Colocamos o trecho de código abaixo dentro de um try/catch:
+    const { provider, date } = request.body;
+    const parsedDate = parseISO(date);
+    const createAppointment = new CreateAppointmentService(
+        appointmentsRepository,
+    );
+    const appointment = createAppointment.execute({date: parsedDate, provider});
+    
+    return response.json(appointment);
+
+
+Agora os arquivos ficaram assim:
+================================
+
+- Em src/services/CreateAppointmentService.ts:
+    // Responsável pela criação de agendamento
+    import Appointment from '../models/Appointment';
+    import AppointmentsRepository from '../repositories/AppointmentsRepository';
+    import { startOfHour } from 'date-fns';
+
+    interface Request {
+      provider: string;
+      date: Date;
+    }
+
+    class CreateAppointmentService {
+      private appointmentsRepository: AppointmentsRepository;
+      constructor(appointmentsRepository: AppointmentsRepository){
+        this.appointmentsRepository = appointmentsRepository; 
+      }
+      public execute({ date, provider }: Request): Appointment {
+        const appointmentDate = startOfHour(date);
+        const findAppointmentInSameDate = this.appointmentsRepository.findByDate(
+          appointmentDate,
+        );
+
+        if (findAppointmentInSameDate) {
+          throw Error("This appointment is already booked");
+        }
+
+        const appointment = this.appointmentsRepository.create({
+          provider,
+          date: appointmentDate,
+        });
+        return appointment;
+      }
+    }
+
+    export default CreateAppointmentService;
+
+- Em src/repositories/AppointmentsRepository.ts:
+    import { isEqual } from 'date-fns';
+    import Appointment from '../models/Appointment';
+
+    interface CreateAppointmentDTO {
+        provider: string;
+
+        date: Date;
+    }
+
+    class AppointmentsRepository {
+        private appointments: Appointment[];
+
+        constructor() {
+            this.appointments = [];
+        }
+
+        public all(): Appointment[] | null {
+            return this.appointments;
+        }
+
+        public findByDate(date: Date): Appointment | null {
+            const findAppointment = this.appointments.find(appointment =>
+                isEqual(date, appointment.date),
+            );
+
+            return findAppointment || null;
+        }
+
+        public create({ provider, date }: CreateAppointmentDTO): Appointment {
+            const appointment = new Appointment({ provider, date });
+
+            this.appointments.push(appointment);
+
+            return appointment;
+        }
+    }
+
+    export default AppointmentsRepository;
+
+- Em src/routes/appointments.routes.ts:
+    import { Router } from 'express';
+    import { parseISO } from 'date-fns';
+    import AppointmentsRepository from '../repositories/AppointmentsRepository';
+    import CreateAppointment from '../services/CreateAppointmentService';
+    import CreateAppointmentService from '../services/CreateAppointmentService';
+
+    const appointmentsRouter = Router();
+    const appointmentsRepository = new AppointmentsRepository();
+
+    appointmentsRouter.get('/', (request, response) => {
+        const appointments = appointmentsRepository.all();
+        return response.json(appointments);
+    });
+
+    appointmentsRouter.post('/', (request, response) => {
+      try {
+          const { provider, date } = request.body;
+          const parsedDate = parseISO(date);
+          const createAppointment = new CreateAppointmentService(
+              appointmentsRepository,
+          );
+          const appointment = createAppointment.execute({date: parsedDate, provider});
+          
+          return response.json(appointment);
+      } catch (err) {
+          return response.status(400).json({error: err.message});
+      }
+    });
+
+    export default appointmentsRouter;
+
+    {error: err.message}:
+      - Error: classe global que possui message
+      - message: mensagem de trow em CreateAppointmentService
+
+
+Recapitulando o que foi feito:
+- Separamos da rota o que é regra de negócio de transformação de dados.
+    Transformação de dados fica em rotas.
+    Regras de negócio ficam em services.
+- Dentro de services:
+    - Criamos o execute que é o único método de service que recebe "date e provider".
+    - Fez todos os passos para verificação se a data está disponível.
+    - Cria e retorna o agendamento criado se não houver erro.
+Toda vez que formos criar um agendamento será através de services por mais que seja simples pois futuramente poderá ser necessário criar outros services.
+
+
+Responsabilidades:
+==================
+
+ROTAS
+  As rotas são responsáveis por:
+    - Receber a requisição
+    - Chamar outro arquivo
+    - Devolver uma resposta
+
+MODELS
+  Os models são responsáveis pelo formato de como os dados serão armazenados.
+  
+
+REPOSITÓRIOS
+  Os repositórios são responsáveis pelas operações com os dados (CRUD) sempre que formos armazená-los.
+  É a conexão entre onde iremos persistir os dados (como um DB) e a Rota.
+
+SERVICES:
+  Os services são responsáveis pelas regras de negócio da aplicação.
+  Sempre tem uma única exclusiva funcionalidade/método como um execute ou run.
+  Exemplo: criação de algum objeto/elemento/item.
+
+
+
+DOCKER
+======
+- Instalação do Docker
+    curl -fsSL https://get.docker.com/ | sh
+    Dessa forma instalará sempre a última versão ou atualizará a sua.
+
+- Habilitar para que seu serviço seja iniciado automaticamente com o sistema
+    sudo systemctl status docker
+    sudo systemctl enable docker
+
+- Verificar se o Docker foi instalado da forma correta
+    docker version
+
+
+- Adicionando o usuário ao grupo Docker
+    sudo usermod -aG docker $(whoami)
+
+- Reinicie o computador para ter acesso ao Docker sem usar o sudo
+
+
+- Criando container postgres:
+    docker run --name gostack_postgres -e POSTGRES_PASSWORD=docker -p 5432:5432 -d postgres
+
+- Instalando TypeORM para trabalharmos com os comandos do postgres
+    Informações em: https://typeorm.io
+      Em Connection Options selecione o DB para ver como é a instalação do driver e as especificações dos campos que podemos utilizar no arquivo de configuração.
+      Em Working with Connection pode ser encontrado os drivers de acordo com o DB.
+      Aqui usaremos o postgres, então o comando abaixo instala o ORM e o driver do postgres:
+        yarn add typeorm pg
+      Em Using ormconfig.json tem as instruções de como criar o arquivo de configuração.
+- Crie o arquivo de configuração para o TypeORM em src/ormconfig.json.
+    {
+      "type": "postgres",
+      "host": "localhost",
+      "port": 5432,
+      "username": "docker",
+      "password": "docker",
+      "database": "gostack_gobarber"
+    }
+- Crie o o arquivo src/database/index.ts que irá chamar o ormconfig.json. Tanto esse arquivo quanto o cli do TypeORM lêem esse arquivo.
+    import { createConnection } from 'typeorm';
+
+    createConnection();
+
+- Importamos a conexão em src/server.ts:
+    import './database';
+
+Agora já é possível acessar o banco de dados, inclusive pelo DBeaver.
+
+
+MIGRATIONS
+==========
+
+- Crie a pasta src/migrations.
+- Configurando as migrations em ormconfig.json:
+    "migrations": [
+      "./src/database/migrations/*.ts"
+    ],
+    "cli": {
+      "migrationsDir": "./src/database/migrations"
+    }
+
+O TypeORM oferece suporte tanto para aplicações escritas em Typescript quanto em JS. Dessa forma, se rodarmos as migrations agora ele se perderá em qual formato criar. Para que ele interprete como Typescript, vamos configurar em package.json dentro de "scripts":
+  "typeorm": "ts-node-dev ./node_modules/typeorm/cli.js"
+- Execute o TypeORM:
+    yarn typeorm
+
+- Criando as migrations:
+    yarn typeorm migration:create -n CreateAppointments
+    -n: para indicar o nome da migration CreateAppointments
+    Será gerado um arquivo em src/database/migrations com as migrações. Devemos colocar as instruções dentro desse arquivo para um controle de versões do DB.
+- Arquivo padrão de migrations:
+    import {MigrationInterface, QueryRunner} from "typeorm";
+
+    export class CreateAppointments1594931787307 implements MigrationInterface {
+
+        public async up(queryRunner: QueryRunner): Promise<void> {
+        }
+
+        public async down(queryRunner: QueryRunner): Promise<void> {
+        }
+
+    }
+    Dentro de up são as alterações e dentro de down é o reverso de up para que se algo der errado, possa retornar ao estado anterior.
+- Arquivo com as modificações:
+    import {MigrationInterface, QueryRunner, Table} from "typeorm";
+
+    export class CreateAppointments1594931787307 implements MigrationInterface {
+
+        public async up(queryRunner: QueryRunner): Promise<void> {
+            await queryRunner.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`);
+            await queryRunner.createTable(
+                new Table({
+                    name: 'appointments',
+                    columns: [
+                        {
+                            name: 'id',
+                            type: 'uuid',
+                            isPrimary: true,
+                            generationStrategy: 'uuid',
+                            default: 'uuid_generate_v4()'
+                        },
+                        {
+                            name: 'provider',
+                            type: 'varchar',
+                            isNullable: false,
+                        },
+                        {
+                            name: 'date',
+                            type: 'timestamp with time zone',
+                            isNullable: false,
+                        },
+                        {
+                            name: 'created_at',
+                            type: 'timestamp',
+                            default: 'now()',
+                        },
+                        {
+                            name: 'updated_at',
+                            type: 'timestamp',
+                            default: 'now()',
+                        },
+                    ]
+                })
+            )
+        }
+
+        public async down(queryRunner: QueryRunner): Promise<void> {
+            await queryRunner.dropTable('appointments');
+        }
+
+    }
+
+    queryRunner.createTable: comando para criar a tabela
+    new Table: cria uma nova tabela
+    name: 'appointments',: nome da tabela
+    columns: onde serão especificadas as colunas
+      name: nome da coluna
+      type: tipo de dado da coluna
+      isPrimary: chave primária
+      generationStrategy: método utilizado para geração do ID
+      isNullable: false não pode ser um campo nulo. NÃO É NECESSÁRIO QUANDO FOR FALSE POIS É PADRÃO.
+      type: 'timestamp with time zone': somente para Postgres. Além do horário salvará também o                                       fuso horário. Para outro DB é apenas timestamp.
+
+- Executando as migrations:
+    yarn typeorm migration:run
+  
+  Supondo que um tipo de campo foi criado em formato incorreto, o mesmo poderá ser corrigido por duas formas:
+    - Fazendo uma nova migration com outro nome
+    - Alterando no arquivo mas existem umas regras:
+      IMPORTANTE: Só pode alterar migration se ela não foi enviada para um sistema de controle de versão como o git ou enviada a alguém da equipe. Se já tiver sido enviada, obrigatoriamente você precisará criar uma nova migration com as alterações necessárias.
+      - Mostrando as migrations:
+          yarn typeorm migration:show
+      - Desfazendo uma migration:
+          yarn typeorm migration:revert
+      - Altere o arquivo e execute novamente a migration:
+          yarn typeorm migration:run
+
+
+RELACIONANDO A APLICAÇÃO COM O DB
+=================================
+
+- Vamos habilitar a funcionalidade do Typescript chamada  decorators que funcionam como funções. Assim podemos passar o decorator como parâmetro para enviar a classe.
+Fazemos a declaração do decorator logo acima da classe dessa forma: @Entity('nome_da_tabela')
+  - Em tsconfig.json descomentaremos as linhas
+    /* Experimental Options */
+    "experimentalDecorators": true,        /* Enables experimental support for ES7 decorators. */
+    "emitDecoratorMetadata": true,         /* Enables experimental support for emitting type metadata for decorators. */
+
+- Em src/models/Appointment.ts:
+  - Importamos Entity (um model que será salvo no DB):
+      import { Entity } from 'typeorm';
+      
+  - Colocaremos o decorator logo acima da classe:
+      @Entity('appointments')
+      class Appointment {
+
+  - Fazemos as importações para informar quais os tipos de cada coluna:
+      import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+
+  - Em cima de cada coluna colocaremos os decorators:
+      import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+
+      @Entity('appointments')
+      class Appointment {
+          @PrimaryGeneratedColumn('uuid')
+          id: string;
+
+          @Column()
+          provider: string;
+          
+          @Column('timestamp with time zone')
+          date: Date;
+
+          @CreateDateColumn()
+          created_at: Date;
+
+          @UpdateDateColumn()
+          updated_at: Date;
+      }
+
+      export default Appointment;
+
+  - Retiramos o import de uuid
+
+  - Retiramos o constructor pois não precisaremos mais dele já que o TypeORM gera automaticamente.
+      Isso gera erros no código porque as variáveis não foram inicializadas já que retiramos o constructor mas o TypeORM faz isso por debaixo dos panos. Para não ficar com esses erros no código precisamos desabilitar (descomentar e modificar) uma linha em tsconfig.json:
+        "strictPropertyInitialization": false,    /* Enable strict checking of property initialization in classes. */
+
+Salvando, listando, entre outras operações com o DB
+  O TypeORM já tem por padrão um repositório com os métodos (CRUD) entre outros
+- Em src/repositories/AppointmentsRepository.ts:
+  - Retiramos private, constructor, all, create e a interface pois o TypeORM tem métodos prontos para isso, deixando apenas o método findByDate.
+  - Importamos EntityRepository e Repository
+      import { EntityRepository, Repository } from 'typeorm';
+  - Utilizamos o decorator com o parâmetro Appointment que é o model:
+      @EntityRepository(Appointment)
+  - Extendemos Repository que contém os métodos CRUD
+      class AppointmentsRepository extends Repository<Appointment> {
+      Essa interface Repository recebe como parâmetro o model desse repositório
+  - Substituiremos:
+      public findByDate(date: Date): Appointment | null {
+        const findAppointment = this.appointments.find(appointment =>
+          isEqual(date, appointment.date),
+        );
+    Por:
+      public async findByDate(date: Date): Promise<Appointment | null> {
+        const findAppointment = await this.findOne({
+            where: { date },
+        });
+    findOne: método do TypeORM que procura por um item. Como é uma Promise, precisamos utilizar async/await e informar que será uma Promise passando o tipo do retorno como parâmetro 
+    where: { date }: poderia ser where: { date: date } mas utilizamos short syntax para procuramos por uma date do DB que seja igual a date recebida. É como uma query solicitando encontrar um appointment onde a data do appointment (date) seja igual ao findByDate(date: Date).
+    É como se fosse: const response = await findByDate(date) onde findByDate(date) retorna uma Promise e response tem o formato Appointment | null.
+  - Retiramos isEqual que não utilizaremos mais aqui
+
+- Em src/services/CreateAppointmentService.ts:
+  - Retiramos private, constructor
+  - Importamos getCustomRepository para termos acesso aos métodos CRUD do TypeORM.
+      import { getCustomRepository } from 'typeorm';
+  - Dentro de execute:
+      - Declaramos uma variável que terá acesso aos métodos:
+          const appointmentsRepository = getCustomRepository(AppointmentsRepository);
+          Agora appointmentsRepository tem acesso aos métodos CRUD, etc...
+  - Retiramos this de this.appointmentsRepository que é essa variável criada.
+  - Precisamos do await aqui porque findByDate é uma Promise.
+      const findAppointmentInSameDate = await appointmentsRepository.findByDate(
+        appointmentDate,
+      );
+  - Salvando no DB:
+      O método create só cria o objeto mas não salva. Precisamos salvar com:
+        await appointmentsRepository.save(appointment);
+        Como usamos await precisamos tornar essa função assíncrona com async e como estamos utilizando async teremos o retorno como uma Promise, devemos informar também:
+          Substituiremos:
+            public execute({ date, provider }: Request): Appointment {
+          Por:
+            public async execute({ date, provider }: Request): Promise<Appointment> {
+
+- Em src/routes/appointments.routes.ts:
+  - Importamos getCustomRepository:
+      import { getCustomRepository } from 'typeorm';
+  - No método GET:
+    - Substituímos:
+        const appointmentsRepository = new AppointmentsRepository();
+        const appointments = appointmentsRepository.all();
+      Por:
+        const appointmentsRepository = getCustomRepository(AppointmentsRepository);
+        const appointments = appointmentsRepository.find();
+
+  - No método POST:
+      - Substituímos:
+          const createAppointment = new CreateAppointmentService(
+            appointmentsRepository,
+          );
+        Por:
+          const createAppointment = new CreateAppointmentService();
+        Pois não precisa mais do appointmentsRepository
+      - Precisamos mudar a função para assíncrona com async/await:
+          appointmentsRouter.post('/', async (request, response) => {
+          const appointment = await createAppointment.execute({ date: parsedDate, provider });
+
+- Instalando reflect-metadata para usarmos os decorators:
+    yarn add reflect-metadata
+- Importando reflect-metadata no primeiro arquivo da aplicação (src/server.ts):
+    import 'reflect-metadata';
+- Em ormconfig.json especificamos as entidades:
+    "entities": [
+      "./src/models/*.ts"
+    ],
+
+OBS: CASO TENHA ALGUM PROBLEMA COM A FUNÇÃO 'uuid_generate_v4()' NA MIGRATION CreateAppointment, PRECISARÁ COLOCAR ESSA LINHA NO CÓDIGO DA PRÓPRIA MIGRATION:
+  await queryRunner.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`);
+
+
+*** NESSE MOMENTO OS ARQUIVOS FICARAM ASSIM ***
+
+- Em src/database/migrations/1595020451856-CreateAppointments.ts:
+    import {MigrationInterface, QueryRunner, Table} from "typeorm";
+
+    export class CreateAppointments1594931787307 implements MigrationInterface {
+
+        public async up(queryRunner: QueryRunner): Promise<void> {
+            await queryRunner.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`);
+            await queryRunner.createTable(
+                new Table({
+                    name: 'appointments',
+                    columns: [
+                        {
+                            name: 'id',
+                            type: 'uuid',
+                            isPrimary: true,
+                            generationStrategy: 'uuid',
+                            default: 'uuid_generate_v4()'
+                        },
+                        {
+                            name: 'provider',
+                            type: 'varchar',
+                            isNullable: false,
+                        },
+                        {
+                            name: 'date',
+                            type: 'timestamp with time zone',
+                            isNullable: false,
+                        },
+                        {
+                            name: 'created_at',
+                            type: 'timestamp',
+                            default: 'now()',
+                        },
+                        {
+                            name: 'updated_at',
+                            type: 'timestamp',
+                            default: 'now()',
+                        },
+                    ]
+                })
+            )
+        }
+
+        public async down(queryRunner: QueryRunner): Promise<void> {
+            await queryRunner.dropTable('appointments');
+        }
+
+    }
+
+- Em src/repositories/AppointmentsRepository.ts:
+    import Appointment from '../models/Appointment';
+    import { EntityRepository, Repository } from 'typeorm';
+
+    @EntityRepository(Appointment)
+    class AppointmentsRepository extends Repository<Appointment> {
+        public async findByDate(date: Date): Promise<Appointment | null> {
+            const findAppointment = await this.findOne({
+                where: { date },
+            });
+
+            return findAppointment || null;
+        }
+    }
+
+    export default AppointmentsRepository;
+
+- Em src/services/CreateAppointmentService.ts:
+    // Responsável pela criação de agendamento
+    import { startOfHour } from 'date-fns';
+    import { getCustomRepository } from 'typeorm';
+
+    import Appointment from '../models/Appointment';
+    import AppointmentsRepository from '../repositories/AppointmentsRepository';
+
+    interface Request {
+      provider: string;
+      date: Date;
+    }
+
+    class CreateAppointmentService {
+      public async execute({ date, provider }: Request): Promise<Appointment> {
+        const appointmentsRepository = getCustomRepository(AppointmentsRepository);
+        const appointmentDate = startOfHour(date);
+        const findAppointmentInSameDate = await appointmentsRepository.findByDate(
+          appointmentDate,
+        );
+
+        if (findAppointmentInSameDate) {
+          throw Error("This appointment is already booked");
+        }
+
+        const appointment = appointmentsRepository.create({
+          provider,
+          date: appointmentDate,
+        });
+
+        await appointmentsRepository.save(appointment);
+
+        return appointment;
+      }
+    }
+
+    export default CreateAppointmentService;
+
+- Em src/routes/appointments.routes.ts:
+    import { Router } from 'express';
+    import { getCustomRepository } from 'typeorm';
+    import { parseISO } from 'date-fns';
+    import AppointmentsRepository from '../repositories/AppointmentsRepository';
+    import CreateAppointmentService from '../services/CreateAppointmentService';
+
+    const appointmentsRouter = Router();
+
+    appointmentsRouter.get('/', async (request, response) => {
+        const appointmentsRepository = getCustomRepository(AppointmentsRepository);
+        const appointments = await appointmentsRepository.find();
+        return response.json(appointments);
+    });
+
+    appointmentsRouter.post('/', async (request, response) => {
+        try {
+            const { provider, date } = request.body;
+            const parsedDate = parseISO(date);
+            const createAppointment = new CreateAppointmentService();
+            const appointment = await createAppointment.execute({ date: parsedDate, provider });
+
+            return response.json(appointment);
+        } catch (err) {
+            return response.status(400).json({ error: err.message });
+        }
+    });
+
+    export default appointmentsRouter;
+
+- Em src/models/Appointment.ts:
+    import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+
+    @Entity('appointments')
+    class Appointment {
+        @PrimaryGeneratedColumn('uuid')
+        id: string;
+
+        @Column()
+        provider: string;
+        
+        @Column('timestamp with time zone')
+        date: Date;
+
+        @CreateDateColumn()
+        created_at: Date;
+
+        @UpdateDateColumn()
+        updated_at: Date;
+    }
+
+    export default Appointment;
+
+- Em src/server.ts:
+    import 'reflect-metadata';
+    import express from 'express';
+    import routes from './routes';
+    import './database';
+
+    const app = express();
+    app.use(express.json());
+    app.use(routes);
+
+    app.listen(3333, () => {
+      console.log('Server started on port 3333');
+    });
+
+
+Criando migrations, models, etc para Users
+- Crie uma migration para users:
+    yarn typeorm migration:create -n CreateUsers
+
+- No arquivo gerado em migrations:
+    import {MigrationInterface, QueryRunner, Table} from "typeorm";
+
+    export default class CreateUsers1595102323419 implements MigrationInterface {
+
+        public async up(queryRunner: QueryRunner): Promise<void> {
+            await queryRunner.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`);
+            await queryRunner.createTable(
+                new Table({
+                    name: 'users',
+                    columns: [
+                        {
+                            name: 'id',
+                            type: 'uuid',
+                            isPrimary: true,
+                            generationStrategy: 'uuid',
+                            default: 'uuid_generate_v4()'
+                        },
+                        {
+                            name: 'name',
+                            type: 'varchar',
+                        },
+                        {
+                            name: 'email',
+                            type: 'varchar',
+                            isUnique: true,
+                        },
+                        {
+                            name: 'password',
+                            type: 'varchar',
+                        },
+                        {
+                            name: 'created_at',
+                            type: 'timestamp',
+                            default: 'now()',
+                        },
+                        {
+                            name: 'updated_at',
+                            type: 'timestamp',
+                            default: 'now()',
+                        },
+                    ]
+                })
+            )
+        }
+
+        public async down(queryRunner: QueryRunner): Promise<void> {
+            await queryRunner.dropTable('users');
+        }
+
+    }
+
+    isUnique: para garantir que o email seja único
+
+- Aplicando a migration:
+    yarn typeorm migration:run
+
+- Criando o model para users:
+  - Crie um arquivo src/models/User.ts
+  - Copie o conteúdo de src/models/Appointment.ts para src/models/User.ts
+  - Altere o nome da classe bem como no export e o nome da tabela de appointments para users
+  - Importe CreateDateColumn e UpdateDateColumn e coloque as colunas com os campos e tipos:
+      import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+
+      @Entity('users')
+      class User {
+          @PrimaryGeneratedColumn('uuid')
+          id: string;
+
+          @Column()
+          name: string;
+          
+          @Column()
+          email: string;
+
+          @Column()
+          password: string;
+
+          @CreateDateColumn()
+          created_at: Date;
+
+          @UpdateDateColumn()
+          updated_at: Date;
+      }
+
+      export default User;
+
+Criando uma nova migration para alterar a coluna provider de Appointments para provider_id referenciando ao id do usuário:
+- Precisamos deletar a coluna provider e criar uma nova com o nome do campo correto:
+  - Criamos uma nova migration:
+      yarn typeorm migration:create -n AlterProviderFieldProviderId
+      - No arquivo gerado em migrations:
+        - No método up criamos o que devemos alterar:
+          - Deletamos a coluna provider:
+              await queryRunner.dropColumn('appointments', 'provider');
+          - Criamos a nova coluna:
+              await queryRunner.addColumn('appointments', new TableColumn({
+                name: 'provider_id',
+                type: 'uuid',
+                isNullable: true,
+              }),
+              );
+
+              isNullable: true para quando o provider deletar sua conta não afete o usuário.
+            
+          - Criamos a chave estrangeira (ForeignKey):
+              await queryRunner.createForeignKey('appointments', new TableForeignKey({
+                name: 'AppointmentProvider',
+                columnNames: ['provider_id'],
+                referencedColumnNames: ['id'],
+                referencedTableName: 'users',
+                onDelete: 'SET NULL',
+                onUpdate: 'CASCADE',
+              }),
+              );
+
+              name: nome da ForeignKey, necessário para identificá-la no método down.
+              columnNames: qual coluna irá receber a chave estrangeira, no caso id do usuário.
+              referencedColumnNames: qual é o nome da coluna na tabela de usuário que será                             relacionado com o provider_id, nesse caso id do usuário.
+              referencedTableName: qual tabela fará referência com esse campo.
+              onDelete:
+                - 'RESTRICT': o usuário não poderá ser deletado.
+                - 'SET NULL': seta a variável como nulo, usado nesse caso.
+                - 'CASCADE': quando o usuário for deletado, tudo relacionado a ele também será.
+              onUpdate: 'CASCADE': caso o usuário tenha seu id alterado essa alteração será                          refletida nos relacionamentos.
+
+        - No método down precisamos reverter na ordem reversa do que foi feito em up:
+            await queryRunner.dropForeignKey('appointments', 'AppointmentProvider');
+            await queryRunner.dropColumn('appointments', 'provider_id');
+            await queryRunner.addColumn('appointments', new TableColumn({
+              name: 'provider',
+              type: 'varchar',
+            }),
+            );
+
+      - Nos arquivos de migrations de CreateAppointments e CreateUsers:
+          - Alteramos o tipo do campo id de varchar para uuid
+
+
+- Precisamos especificar o tipo de relacionamento que iremos utilizar:
+    - Em src/models/Appointment.ts:
+      - Alteramos o nome do campo de provider para:
+          @Column()
+          provider_id: string;
+      - Nesse caso estamos em Appointments e teremos muitos agendamentos para um usuário:
+          import User from './User';
+          @ManyToOne(() => User)
+          @JoinColumn({ name: 'provider_id' })
+          provider: User;
+
+          @JoinColumn: qual coluna identificará o prestador do agendamento
+
+
+*** OS ARQUIVOS FICARAM ASSIM: ***
+
+    - Em src/database/migrations/1595200055428-AlterProviderFieldProviderId.ts:
+        import { MigrationInterface, QueryRunner, TableColumn, TableForeignKey } from "typeorm";
+
+        export default class AlterProviderFieldProviderId1595200055428 implements MigrationInterface {
+
+            public async up(queryRunner: QueryRunner): Promise<void> {
+                await queryRunner.dropColumn('appointments', 'provider');
+
+                await queryRunner.addColumn('appointments', new TableColumn({
+                    name: 'provider_id',
+                    type: 'uuid',
+                    isNullable: true,
+                }),
+                );
+
+                await queryRunner.createForeignKey('appointments', new TableForeignKey({
+                    name: 'AppointmentProvider',
+                    columnNames: ['provider_id'],
+                    referencedColumnNames: ['id'],
+                    referencedTableName: 'users',
+                    onDelete: 'SET NULL',
+                    onUpdate: 'CASCADE',
+                }),
+                );
+            }
+
+            public async down(queryRunner: QueryRunner): Promise<void> {
+                await queryRunner.dropForeignKey('appointments', 'AppointmentProvider');
+                await queryRunner.dropColumn('appointments', 'provider_id');
+                await queryRunner.addColumn('appointments', new TableColumn({
+                    name: 'provider',
+                    type: 'varchar',
+                }),
+                );
+            }
+
+        }
+
+    - Em src/database/migrations/1595102323419-CreateUsers.ts:
+        import {MigrationInterface, QueryRunner, Table} from "typeorm";
+
+        export default class CreateUsers1595102323419 implements MigrationInterface {
+
+            public async up(queryRunner: QueryRunner): Promise<void> {
+                await queryRunner.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`);
+                await queryRunner.createTable(
+                    new Table({
+                        name: 'users',
+                        columns: [
+                            {
+                                name: 'id',
+                                type: 'uuid',
+                                isPrimary: true,
+                                generationStrategy: 'uuid',
+                                default: 'uuid_generate_v4()'
+                            },
+                            {
+                                name: 'name',
+                                type: 'varchar',
+                            },
+                            {
+                                name: 'email',
+                                type: 'varchar',
+                                isUnique: true,
+                            },
+                            {
+                                name: 'password',
+                                type: 'varchar',
+                            },
+                            {
+                                name: 'created_at',
+                                type: 'timestamp',
+                                default: 'now()',
+                            },
+                            {
+                                name: 'updated_at',
+                                type: 'timestamp',
+                                default: 'now()',
+                            },
+                        ]
+                    })
+                )
+            }
+
+            public async down(queryRunner: QueryRunner): Promise<void> {
+                await queryRunner.dropTable('users');
+            }
+
+        }
+
+    - Em src/database/migrations/1595020451856-CreateAppointments.ts:
+        import {MigrationInterface, QueryRunner, Table} from "typeorm";
+
+        export class CreateAppointments1594931787307 implements MigrationInterface {
+
+            public async up(queryRunner: QueryRunner): Promise<void> {
+                await queryRunner.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`);
+                await queryRunner.createTable(
+                    new Table({
+                        name: 'appointments',
+                        columns: [
+                            {
+                                name: 'id',
+                                type: 'uuid',
+                                isPrimary: true,
+                                generationStrategy: 'uuid',
+                                default: 'uuid_generate_v4()'
+                            },
+                            {
+                                name: 'provider',
+                                type: 'varchar',
+                                isNullable: false,
+                            },
+                            {
+                                name: 'date',
+                                type: 'timestamp with time zone',
+                                isNullable: false,
+                            },
+                            {
+                                name: 'created_at',
+                                type: 'timestamp',
+                                default: 'now()',
+                            },
+                            {
+                                name: 'updated_at',
+                                type: 'timestamp',
+                                default: 'now()',
+                            },
+                        ]
+                    })
+                )
+            }
+
+            public async down(queryRunner: QueryRunner): Promise<void> {
+                await queryRunner.dropTable('appointments');
+            }
+
+        }
+
+    - Em src/models/Appointment.ts:
+        import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+        import User from './User';
+                  
+        @Entity('appointments')
+        class Appointment {
+            @PrimaryGeneratedColumn('uuid')
+            id: string;
+
+            @Column()
+            provider_id: string;
+
+            @ManyToOne(() => User)
+            @JoinColumn({ name: 'provider_id' })
+            provider: User;
+            
+            @Column('timestamp with time zone')
+            date: Date;
+
+            @CreateDateColumn()
+            created_at: Date;
+
+            @UpdateDateColumn()
+            updated_at: Date;
+        }
+
+        export default Appointment;
+
+- Aplicamos as migrations:
+    yarn typeorm migration:run
+
+- Criamos o arquivo src/routes/users.routes.ts para rotas de usuários:
+  - Copiamos o conteúdo de src/routes/appointments.routes.ts para esse arquivo.
+  - Alteramos appointmentsRouter para usersRouter
+  - Deletamos o método GET e o conteúdo do try deixando apenas um return response.send(); :
+      import { Router } from 'express';
+
+      const usersRouter = Router();
+
+      usersRouter.post('/', async (request, response) => {
+          try {
+            return response.send();
+          } catch (err) {
+              return response.status(400).json({ error: err.message });
+          }
+      });
+
+      export default usersRouter;
+
+- Em src/routes/index.ts:
+    import { Router } from 'express';
+    import appointmentsRouter from './appointments.routes';
+    import usersRouter from './users.routes';
+
+    const routes = Router();
+
+    routes.use('/appointments', appointmentsRouter);
+    routes.use('/users', usersRouter);
+
+    export default routes;
+
+- Precisamos criar um service porque:
+    - Não podemos criar um registro com email duplicado
+    - Não podemos armazenar a senha sem criptografá-la
+
+- Criaremos o src/services/CreateUserService.ts:
+    class CreateUserService {
+      public async execute(): Promise<void> {
+        
+      }
+    }
+
+    export default CreateUserService;
+
+    - Criamos uma interface:
+        interface Request {
+          name: string;
+          email: string;
+          password: string;
+        }
+        
+    - Informamos os dados que receberá e o tipo:
+        public async execute({ name, email, password }: Request): Promise<void> {
+    
+    - Importamos User de models e informamos o tipo de retorno da função:
+        import User from '../models/User';
+        public async execute({ name, email, password }: Request): Promise<User> {
+
+    - Não é necessário criar um repositório para users porque não teremos nenhum método personalizado.
+        Nesse caso importaremos getRepository e já teremos acesso aos métodos do typeorm:
+          import { getRepository } from 'typeorm';
+        Dentro de execute:
+          const usersRepository = getRepository(User);
+
+    - Checando se o email já existe:
+        const checkUserExists = await usersRepository.findOne({
+          where: {email},
+        });
+        if (checkUserExists) {
+          throw new Error('Email address already used.');
+        }
+    
+    - Criando usuário sem criptografar a senha ainda:
+        const user = usersRepository.create({
+          name,
+          email,
+          password,
+        });
+
+        await usersRepository.save(user);
+
+        return user;
+
+- O arquivo src/services/CreateUserService.ts ficou assim:
+    import { getRepository } from 'typeorm';
+    import User from '../models/User';
+
+    interface Request {
+      name: string;
+      email: string;
+      password: string;
+    }
+
+    class CreateUserService {
+      public async execute({ name, email, password }: Request): Promise<User> {
+        const usersRepository = getRepository(User);
+        
+        const checkUserExists = await usersRepository.findOne({
+          where: {email},
+        });
+        if (checkUserExists) {
+          throw new Error('Email address already used.');
+        }
+
+        const user = usersRepository.create({
+          name,
+          email,
+          password,
+        });
+
+        await usersRepository.save(user);
+
+        return user;
+      }
+    }
+
+    export default CreateUserService;
+
+- Em src/routes/users.routes.ts:
+  - Importamos o service:
+      import CreateUserService from '../services/CreateUserService';
+  - Dentro do método POST:
+      const createUser = new CreateUserService();
+      const createUser = new CreateUserService();
+      const user = await createUser.execute({
+        name,
+        email,
+        password,
+      });
+      return response.json(user);
+
+- Precisaremos alterar o campo provider para provider_id em alguns lugares:
+  - Nessas duas linhas em src/routes/appointments.routes.ts:
+      const { provider_id, date } = request.body;
+      const appointment = await createAppointment.execute({ date: parsedDate, provider_id });
+
+  - Nessas três linhas em src/services/CreateAppointmentService.ts:
+      provider_id: string;
+      public async execute({ date, provider_id }: Request): Promise<Appointment> {
+      const appointment = appointmentsRepository.create({
+        provider_id,
+
+- No Insomnia:
+  - Criaremos um usuário na rota "/users":
+      {
+        "name": "Amauri",
+        "email": "amauri@gmail.com",
+        "password": "1234"
+      }
+  - Pegaremos o id gerado para usarmos na criação de um provider
+  - Passaremos os dados para criação na rota "/appointments":
+      {
+        "provider_id": "8ffb3221-33a8-4660-9bf5-97680c5ea586",
+        "date": "Timestamp => ISO-8601"
+      }
+
+      id qualquer gerado e Timestamp é uma função do Insomnia para data
+
+- Criptografando a senha:
+  - Instalar BCRYPTJS:
+      yarn add bcryptjs
+      yarn add @types/bcryptjs -D
+  
+  - Em src/services/CreateUserService.ts:
+      - Importar hash:
+          import { hash } from 'bcryptjs';
+
+      - Antes da criação do usuário:
+          const hashedPassword = await hash(password, 8);
+            O 8 significa o tamanho do hash para a senha a ser criptografada
+
+      - Não é uma boa prática retornarmos a senha no momento da criação. Para isso deletaremos essa informação após a criação do usuário para que a mesma não apareça na resposta da api:
+          delete user.password;
+
+      - Na criação do usuário passamos a senha criptografada:
+          const user = usersRepository.create({
+            name,
+            email,
+            password: hashedPassword,
+          });
+
+
+*** Após essas modificações os arquivos ficaram assim: ***
+==========================================================
+
+  - Em src/services/CreateAppointmentService.ts:
+      // Responsável pela criação de agendamento
+      import { startOfHour } from 'date-fns';
+      import { getCustomRepository } from 'typeorm';
+
+      import Appointment from '../models/Appointment';
+      import AppointmentsRepository from '../repositories/AppointmentsRepository';
+
+      interface Request {
+        provider_id: string;
+        date: Date;
+      }
+
+      class CreateAppointmentService {
+        public async execute({ date, provider_id }: Request): Promise<Appointment> {
+          const appointmentsRepository = getCustomRepository(AppointmentsRepository);
+          const appointmentDate = startOfHour(date);
+          const findAppointmentInSameDate = await appointmentsRepository.findByDate(
+            appointmentDate,
+          );
+
+          if (findAppointmentInSameDate) {
+            throw Error("This appointment is already booked");
+          }
+
+          const appointment = appointmentsRepository.create({
+            provider_id,
+            date: appointmentDate,
+          });
+
+          await appointmentsRepository.save(appointment);
+
+          return appointment;
+        }
+      }
+
+      export default CreateAppointmentService;
+  
+  - Em src/services/CreateUserService.ts:
+      import { getRepository } from 'typeorm';
+      import User from '../models/User';
+      import { hash } from 'bcryptjs';
+
+      interface Request {
+        name: string;
+        email: string;
+        password: string;
+      }
+
+      class CreateUserService {
+        public async execute({ name, email, password }: Request): Promise<User> {
+          const usersRepository = getRepository(User);
+
+          const checkUserExists = await usersRepository.findOne({
+            where: { email },
+          });
+          if (checkUserExists) {
+            throw new Error('Email address already used.');
+          }
+
+          const hashedPassword = await hash(password, 8);
+
+          const user = usersRepository.create({
+            name,
+            email,
+            password: hashedPassword,
+          });
+
+          await usersRepository.save(user);
+
+          return user;
+        }
+      }
+
+      export default CreateUserService;
+
+  - Em src/routes/users.routes.ts
+      import { Router } from 'express';
+      import CreateUserService from '../services/CreateUserService';
+
+      const usersRouter = Router();
+
+      usersRouter.post('/', async (request, response) => {
+        try {
+          const { name, email, password } = request.body;
+          const createUser = new CreateUserService();
+          const user = await createUser.execute({
+            name,
+            email,
+            password,
+          });
+          delete user.password;
+
+          return response.json(user);
+        } catch (err) {
+          return response.status(400).json({ error: err.message });
+        }
+      });
+
+      export default usersRouter;
+
+
+
+JWT - Json Web Token
+====================
+
+Autenticação de usuário que após a confirmação do mesmo aotentar se autenticar é gerado um token de retorno contendo informações criptografadas que são divididas em três partes como no exemplo abaixo:
+"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE1OTUyNzQ1MDQsImV4cCI6MTU5NTM2MDkwNCwic3ViIjoiYzkzZjkyN2ItYzNjNi00YWQyLWI0OWQtNjFiZGJiYzNiYzM4In0.yuLwTbydogN9Jp6cY9bMkHPiWmaIui_yS-4InSW1HOc"
+  Headers: tipo de token (criptografia), algorítmo que foi usado
+  Payload: Dados adicionais do usuário como o id que não sejam confidenciais
+  Assinatura: garante que o token não foi modificado
+
+- Validando credenciais:
+  - Crie o arquivo src/routes/sessions.routes.ts:
+      - Copie o conteúdo de src/routes/users.routes.ts
+      - Retire o import de CreateUSerService
+      - Dentro de POST deixe somente um response.json:
+          return response.json({ ok: true });
+      - Altere usersRouter para sessionsRouter nos três lugares
+      - Dentro do try declaramos os dados que serão recebidos:
+          const { email, password } = request.body;
+  
+  Como teremos regras de negócio para verificação se email e senha existem, se estão corretos, gerar o token JWT, etc. precisamos criar um service:
+    - Crie o src/services/AuthenticateUserService.ts:
+        class AuthenticateUserService {
+          public async execute({ email, password }): Promise<void> {
+
+          }
+        }
+
+        export default AuthenticateUserService;
+
+        - Precisamos informar o tipo de retorno para { email, password }. Para isso criaremos uma interface:
+          interface Request {
+            email: string;
+            password: string;
+          }
+          
+        - Informamos os dados como sendo do tipo Request (interface criada):  
+            public async execute({ email, password }: Request): Promise<void> {
+
+  - Em src/routes/index.ts:
+    - Importe sessions:
+        import sessionsRouter from './sessions.routes';
+
+    - Declare o use:
+        routes.use('/sessions', sessionsRouter);
+
+    - Ficando assim:
+        import { Router } from 'express';
+        import appointmentsRouter from './appointments.routes';
+        import usersRouter from './users.routes';
+        import sessionsRouter from './sessions.routes';
+
+        const routes = Router();
+
+        routes.use('/appointments', appointmentsRouter);
+        routes.use('/users', usersRouter);
+        routes.use('/sessions', sessionsRouter);
+
+        export default routes;
+
+  - Em src/routes/sessions.routes.ts:
+    - Importe o service:
+        import AuthenticateUserService from '../services/AuthenticateUserService';
+
+    - Dentro do try, crie a instância do service:
+        const authenticateUSer = new AuthenticateUserService();
+        - Chame o método execute passando os dados:
+            await authenticateUSer.execute({
+              email,
+              password,
+            });
+
+  - Em src/services/AuthenticateUserService.ts:
+    - Precisamos validar se o email recebido é válido, ou seja, precisamos buscar no repositório do usuário:
+        - Importamos:
+            import { getRepository } from 'typeorm';
+            import User from '../models/User';
+            import { compare } from 'bcryptjs';
+
+    - Em execute:
+      - Criamos o objeto para termos acesso aos métodos como o findOne:
+          const usersRepository = getRepository(User);
+          const user = await usersRepository.findOne({ where: { email } });
+          if (!user) {
+            throw new Error("Invalid email or password");
+          }
+
+          // password: senha recebida, NÃO criptografada
+          // user.password: senha criptografada retornada
+
+          const passwordMatched = await compare(password, user.password);
+          if (!passwordMatched) {
+            throw new Error("Invalid email or password");
+          }
+
+          O compare do bcryptjs verifica se a senha informada (que não está criptografada) é igual a senha cadastrada e criptografada no DB.
+
+      - Se estiver correto o usuário estará autenticado e retornaremos o objeto user:
+          return { user };
+          - Para isso precisamos informar o retorno da Promise:
+            - Podemos fazer assim:
+                Promise<{ user: User }
+              Ou criamos uma interface:
+                interface Response { 
+                  user: User; 
+                }
+
+              E passamos o retorno da Promise assim:
+                Promise<Response>
+
+  - Em src/routes/sessions.routes.ts:
+    - É sempre bom especificar o que recebemos. Ao invés de um response, usaremos { user }:
+      const { user } = await authenticateUSer.execute({
+        email,
+        password,
+      });
+      delete user.password;
+      
+      return response.json({ user });
+
+      - Deletamos o password do retorno para não aparecer essa resposta na api.
+
+  - Gerando JWT
+    ===========
+    - Instalar o pacote:
+        yarn add jsonwebtoken
+        yarn add @types/jsonwebtoken -D
+
+    - Em src/services/AuthenticateUserService.ts:
+      - Importamos o pacote:
+          import { sign } from 'jsonwebtoken';
+
+      - Antes do retorno de user criaremos o token:
+          const token = sign();
+          - Dentro de sign passamos as informações do usuário que serão utilizadas depois. 
+          No primeiro parâmetro normalmente são enviadas as permissões ou o nome do usuário. NUNCA a senha por exemplo. 
+          No segundo parâmetro é uma chave secreta que tem várias formas e a mais simples é uma string, então podemos colocar uma secret que só nossa aplicação conhece. Para fazer isso utilizaremos um site que gera qualquer texto em uma string única:
+            Site do md5 online:
+              http://www.md5.cz/
+              Digite um texto, clique em hash!, copie e cole no segundo parâmetro.
+          No terceiro parâmetro são algumas configurações do token:
+            subject: id do usuário que gerou esse token. A informação mais importante
+            expiresIn: quanto tempo durará essa sessão, nosso caso "1 dia".
+      
+      - Retornamos no objeto o token junto com o usuário
+          const token = sign({}, 'f60981211c42664d9eb97e22a047f966', {
+            subject: user.id,
+            expiresIn: '1d',
+          });
+
+          return { user, token };
+
+          - Agora precisamos informar o token na interface:
+              interface Response {
+                user: User;
+                token: string;
+              }
+    - Em src/routes/sessions.routes.ts:
+        - Inserimos o token:
+            const { user, token } = await authenticateUSer.execute({
+              email,
+              password,
+            });
+            delete user.password;
+
+            return response.json({ user, token });
+
+- Execute o projeto e crie uma sessão no Insomnia, o token será gerado e retornado. Se pegarmos esse token e acessarmos o site https://jwt.io/ poderemos colá-lo para ver as informações de quando foi criado(iat), quando irá expirar(exp), id do usuário(sub).
+  Observe que não foi necessário informar o segundo parâmetro de sign 'f60981211c42664d9eb97e22a047f966' para ver as informações. Por isso não devemos informar senha ou algo confidencial. 
+  Veremos mais pra frente como a aplicação saberá se o token é válido e se foi gerado a partir dessa chave secreta ('f60981211c42664d9eb97e22a047f966') com o verify que é uma função do jsonwebtoken onde recebe um token como parâmetro, utiliza a chave secreta que só está disponível no backend (ninguém pode saber, então não pode em hipótese alguma ir para o frontend) e então saberá se foi gerado o token a partir dessa chave.
+
+
+
+MIDDLEWARE DE AUTENTICAÇÃO
+==========================
+Evita que usuário não autenticado possa acessar rotas específicas da nossa aplicação.
+Geralmente passamos essa informação no Header do POST:
+header:Authorization  value:Bearer <token>
+No Insomnia temos uma forma mais fácil de passar esse token que é no Auth -> Bearer Token -> Token. Pode-se salvar nas variáveis de ambiente e passar somente o nome token para facilitar:
+{
+  "base_url": "http://localhost:3333",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE1OTUyNzQ1MDQsImV4cCI6MTU5NTM2MDkwNCwic3ViIjoiYzkzZjkyN2ItYzNjNi00YWQyLWI0OWQtNjFiZGJiYzNiYzM4In0.yuLwTbydogN9Jp6cY9bMkHPiWmaIui_yS-4InSW1HOc"
+}
+
+- Crie o arquivo src/middlewares/ensureAuthenticated.ts:
+    import { Request, Response, NextFunction } from 'express';
+    import {verify} from 'jsonwebtoken';
+
+    export default function ensureAuthenticated(
+      request: Request,
+      response: Response,
+      next: NextFunction
+    ): void {
+      const authHeader = request.headers.authorization;
+      if(!authHeader) {
+        throw new Error("JWT token is missing");
+      }
+
+      const [, token] = authHeader.split(' ');
+      const decoded = verify(token, 'f60981211c42664d9eb97e22a047f966');
+    }
+
+    Passamos o next para a aplicação seguir ao restante das rotas se o usuário estiver autenticado.
+    Passamos void como retorno e os tipos de dados.
+    authHeader: pega o token dos headers
+    split: dividimos a palavra Bearer do token e pegamos somente o token [, token]. Não precisamos 
+           passar o nome da variável que não queremos utilizar e sim apenas uma vírgula.
+    verify: verifica se o token é válido e retorna o token codificado em decoded.
+    Como estamos passando a chave secreta aqui também, criaremos um arquivo de configuração para não ficar duplicando código e também porque é mais seguro.
+
+
+DICA: Para descobrir os tipos, passamos o mouse em cima, colocamos um parâmetro na função ou clicamos em algum método (CTRL + clique).
+
+- Crie o arquivo de configuração src/config/auth.ts inserindo a chave secreta:
+    export default {
+      jwt: {
+        secret: 'f60981211c42664d9eb97e22a047f966',
+        expiresIn: '1d',
+      },
+    };
+
+- Em src/services/AuthenticateUserService.ts:
+  - Importamos o arquivo de configuração src/config/auth.ts:
+      import authconfig from '../config/auth';
+      
+  - Desestruturamos e passamos as informações do arquivo de configuração
+      const { secret, expiresIn } = authconfig.jwt;
+      const token = sign({}, secret , {
+        subject: user.id,
+        expiresIn,
+      });
+
+- Em src/middlewares/ensureAuthenticated.ts:
+  - Importamos o arquivo de configuração src/config/auth.ts:
+      import authconfig from '../config/auth';
+
+  - Passamos a secret para o verify:
+      const decoded = verify(token, authconfig.jwt.secret);
+      
+      Esse decoded terá os dados do payload do token (iat, exp, sub).
+      Se der tudo certo, segue as rotas com next().
+      O verify retornará um erro caso o token não seja válido e como esse erro não é a mensagem que queremos, colocaremos um try e captaremos o erro de catch, colocando nossa mensagem:
+      No Typescript não precisamos colocar catch (err), somente catch.
+      try {
+        const decoded = verify(token, authconfig.jwt.secret);
+
+        return next();
+      } catch {
+        throw new Error("Invalid JWT token");
+      }
+
+- Em src/routes/appointments.routes.ts:
+  - Importamos o middleware:
+      import ensureAuthenticated from '../middlewares/ensureAuthenticated';
+
+  - Informamos que irá aplicar esse middleware em todas as rotas de agendamentos.
+      appointmentsRouter.use(ensureAuthenticated);
+
+No Insomnia faremos os testes com o método GET na rota /appointments retornando conforme abaixo:
+  - Não enviar o token: retorna "JWT token is missing".
+  - Enviar o token errado: retorna "Invalid JWT token".
+  - Enviar o token correto: retorna todos os appointments.
+  - Verificar no terminal o console.log(decoded): retorna:
+      {
+        iat: 1595274504,
+        exp: 1595360904,
+        sub: 'c93f927b-c3c6-4ad2-b49d-61bdbbc3bc38'
+      }
+
+Agora uma das coisas importantes para fazermos é incluir as informações desse usuário que gerou o token nas próximas requisições/middlewares/rotas que forem executar a partir de agora.
+Tudo que incluirmos em request e response do middleware, em toda rota que for executado depois do middleware, as informações também ficarão presentes.
+Iremos informar o id do usuário nas requisições a partir do middleware para sabermos quem é e para mostrar dados pertencentes a ele.
+
+- Em src/middlewares/ensureAuthenticated.ts:
+  - Criamos uma interface para informar qual tipo de dado o token retornará:
+      interface TokenPayload {
+        iat: number;
+        exp: number;
+        sub: string;
+      }
+
+  - Dentro do try desestruturamos forçamos um formato para decoded usando a palavra reservada "as":
+      const { sub } = decoded as TokenPayload;
+
+  - Qual usuário está realizando a requisição passando o sub(id do usuário) para id:
+      request.user = {
+          id: sub,
+        };
+
+    Isso gera um erro porque request não tem user. Nesse caso vamos sobrescrever o tipo da biblioteca que estamos importando (express).
+    Sempre que modificarmos o comportamento de uma biblioteca, precisaremos modificar os tipos dela.
+    
+- Criamos o arquivo src/@types/express.d.ts:
+    declare namespace Express {
+      export interface Request {
+        user: {
+          id: string;
+        };
+      }
+    }
+
+  express.d.ts:
+    express: nome da biblioteca que faremos alteração
+    d: definição de tipos
+    declare namespace Express: para sobrescrever uma tipagem de dentro de Express, namespace existe                            também dentro de Express, por exemplo.
+    export interface Request: sobrescrevendo aquela exportação do Request que já existe de dentro                             do Express. Isso NÃO substituirá e sim anexará ao que já existe.
+    user: { id: string; };: informação a ser acrescentada, o user que possui o id.
+
+  Agora request.user não tem mais erro porque já faz parte da biblioteca do Express e temos acesso em todas as rotas com request.user. Se fizermos um console.log(request.user); dentro de uma rota, por exemplo, GET em src/routes/appointments.routes.ts retornará o id do usuário.
+  Não tinha como prosseguirmos sem fazer isso. Existem outras formas de fazer, pesquise na internet.
+
+
+UPLOAD DE IMAGENS
+=================
+- Criar uma nova migration para acrescentar um campo para avatar
+    yarn typeorm migration:create -n AddAvatarFieldToUsers
+
+- No arquivo de migration gerado:
+    import { MigrationInterface, QueryRunner, TableColumn } from "typeorm";
+
+    export default class AddAvatarFieldToUsers1595353168008 implements MigrationInterface {
+
+        public async up(queryRunner: QueryRunner): Promise<void> {
+            await queryRunner.addColumn('users',
+                new TableColumn({
+                    name: 'avatar',
+                    type: 'varchar',
+                    isNullable: true,
+                }),
+            );
+        }
+
+        public async down(queryRunner: QueryRunner): Promise<void> {
+            await queryRunner.dropColumn('users', 'avatar');
+        }
+
+    }
+
+    type: NUNCA armazene a imagem no DB e sim o caminho dela.
+    isNullable: True; => Como nossa tabela já tem dados não podemos deixá-la como nula porque conflitaria com os registros anteriores que não tem esse campo. Se fosse "false" teríamos que fazer uma query atualizando os dados antigos na tabela na migration antes de criar a coluna.
+
+- Execute a migration:
+    yarn typeorm migration:run
+
+- Em src/models/User.ts incluímos o campo avatar abaixo de password:
+    @Column()
+    avatar: string;
+
+- Criamos uma rota de avatar para usuários:
+  - Em src/routes/users.routes.ts:
+    - Importamos ensureAuthenticated:
+        import ensureAuthenticated from '../middlewares/ensureAuthenticated';
+
+    - Especificamos a rota passando ensureAuthenticated porque o usuário precisa estar autenticado  
+      para conseguir alterar seu avatar.
+      usersRouter.patch('/avatar', ensureAuthenticated, async (request, response) => {
+        return response.json({ ok: true });
+      });
+
+      Utilizamos patch porque queremos atualizar somente uma informação do usuário ao contrário de put que atualiza tudo.
+      O usuário precisa estar autenticado, então colocamos o middleware.
+      Por enquanto deixamos um retorno de uma mensagem simples.
+
+- No Insomnia criamos uma requisição para a rota "/users/avatar" do tipo PATCH sem body por enquanto.
+
+- Fazendo o upload de imagens:
+  - Instalar MULTER que é um middleware para lhe dar com upload de imagem para o Express:
+      yarn add multer
+      yarn add @types/multer -D
+
+- Crie o arquivo tmp/.gitkeep para que apenas os arquivos da pasta tmp sejam ignorados e não a pasta em si. Esse arquivo não terá conteúdo.
+
+- Incluir no .gitignore para ignorar todos os arquivos menos o .gitkeep:
+    tmp/*
+    !tmp/.gitkeep
+  Isso garante que a pasta criada no ambiente de produção, github, etc. seja sempre vazia.
+
+- Crie o arquivo de configuração src/config/upload.ts:
+  - Importamos o multer:
+      import multer from 'multer';
+
+  - Importamos path para informar o caminho que funcionará para qualquer sistema operacional:
+      import path from 'path';
+
+  - Importamos o crypto para gerar hashes e criptografias:
+      import crypto from 'crypto';
+
+storage: multer.diskStorage => para armazenar as imagens na própria máquina por enquanto. Precisa 
+         receber duas propriedades: destination e filename. Podemos ver isso 
+         em node_modules/@types/multer/index.d.ts
+  - destination: onde serão salvos os arquivos de upload na aplicação.
+      __dirname: refere-se ao caminho completo do diretório desse arquivo upload.ts.
+      '..': para subir um nível
+      'tmp': pasta que serão salvas as imagens
+  - filename: qual nome o arquivo irá receber. Precisamos modificar o nome porque se dois usuários              fizerem upload de arquivos com o mesmo nome não conflite.
+              Para saber os parâmetros, olhamos o filename em node_modules/@types/multer/index.d.ts
+    - Criamos uma função para gerar o filename:
+        filename(request, file, callback) {
+          const filehash = crypto.randomBytes(10).toString('hex');
+          const filename = `${filehash}-${file.originalname}`;
+          
+          return callback(null, filename);
+        }
+        randomBytes(10): gera um texto de 10 bytes
+        toString: transforma esses bytes em uma string HEX (hexadecimal)
+        filename: Após criado o hash, o incluiremos ao início do nome do arquivo.
+        callback: aceita duas propriedades. O primeiro parâmetro é um erro caso exista. Passamos  
+                  null porque não aconteceu nenhum erro. O segundo parâmetro é o nome do arquivo caso não tenha ocorrido nenhum erro. Passamos o nome do arquivo (filename).
+
+  O arquivo ficou assim:
+    import path from 'path';
+    import crypto from 'crypto';
+    import multer from 'multer';
+
+    export default {
+      storage: multer.diskStorage({
+        destination: path.resolve(__dirname, '..', '..', 'tmp'),
+        filename(request, file, callback) {
+          const filehash = crypto.randomBytes(10).toString('hex');
+          const filename = `${filehash}-${file.originalname}`;
+          
+          return callback(null, filename);
+        }
+      }),
+    };
+
+- Em src/routes/users.routes.ts:
+  - Importamos:
+      import multer from 'multer';
+      import uploadConfig from '../config/upload';
+
+  - Abaixo de const usersRouter = Router(); criamos a instância de multer passando a configuração:
+      const upload = multer(uploadConfig);
+
+  - Informamos que o upload será de apenas um arquivo utilizando single() do multer dentro do método    POST, após ensureAuthenticated para que o usuário já esteja autenticado:
+      upload.single('avatar'),
+      O parâmetro de single é o nome do campo que conterá a imagem quando a rota for chamada.
+      Se apresentar erro, delete a pasta node_modules/@types/multer/node_modules.
+
+  O método POST ficou assim:
+    usersRouter.patch('/avatar',
+      ensureAuthenticated,
+      upload.single('avatar'),
+      async (request, response) => {
+      console.log(request.file);
+        return response.json({ ok: true });
+    });
+
+    O console.log mostra os dados do arquivo enviado no upload:
+      {
+        fieldname: 'avatar',
+        originalname: 'Perfil1.jpg',
+        encoding: '7bit',
+        mimetype: 'image/jpeg',
+        destination: '/home/amauri/cursos/rocketseat/rocketseat-gostack/primeiro-projeto-node/tmp',
+        filename: 'e023904a3dc4d4187d43-Perfil1.jpg',
+        path: '/home/amauri/cursos/rocketseat/rocketseat-gostack/primeiro-projeto-node/tmp/e023904a3dc4d4187d43-Perfil1.jpg',
+        size: 52095
+      }
+
+- No Insomnia precisamos enviar um campo com nome avatar (upload.single('avatar'))
+    Enviaremos como Multipart Form
+      Em value selecione o tipo "file" e escolha o arquivo a ser enviado
+      Em name coloque: avatar
+
+
+SALVANDO O AVATAR NO BANCO DE DADOS
+===================================
+- Crie o arquivo src/services/UpdateUserAvatarService.ts:
+  Precisamos criar as regras de negócio para o usuário alterar o avatar, deletarmos o antigo, etc.
+    interface Request {
+      user_id: string;
+      avatarFilename: string;
+    }
+
+    class UpdateUserAvatarService {
+      public async execute({ user_id, avatarFilename }: Request): Promise<void> {
+
+      }
+    }
+
+    export default UpdateUserAvatarService;
+
+
+- Em src/routes/users.routes.ts:
+  - Importamos o service de update:
+      import UpdateUserAvatarService from '../services/UpdateUserAvatarService';
+
+  - No método PATCH:
+      usersRouter.patch('/avatar',
+      ensureAuthenticated,
+      upload.single('avatar'),
+      async (request, response) => {
+        try{
+          const updateUserAVatar = new UpdateUserAvatarService();
+          await updateUserAVatar.execute({
+            user_id: request.user.id,
+            avatarFilename: request.file.filename,
+          });
+
+          return response.json({ok: true});
+
+        } catch (err) {
+            return response.status(400).json({ error: err.message });
+        }
+      });
+
+      Criamos uma instância de UpdateUserAvatarService.
+      Como execute é uma Promise, usamos await.
+      Como o middleware ensureAuthenticated seta o id do usuário, capturamos ele com request.user.id (que incluímos anteriormente na biblioteca do Express) .
+      Por enquanto o retorno é uma mensagem { ok: true }.
+      O retorno de erro para PATCH será o mesmo de POST.
+
+- Em src/services/UpdateUserAvatarService.ts:
+    Precisamos atualizar um usuário, então acessaremos o repositório do typeorm (getRepository):
+  - Importamos getRepository, model e path:
+      import { getRepository } from 'typeorm';
+      import User from '../models/User';
+      import path from 'path';
+
+  - Em execute criamos o objeto de getRepository:
+      const usersRepository = getRepository(User);
+
+  Precisamos verificar se o id que estamos recebendo nesse service é o id de um usuário válido porque esse service não deve se basear no que está fora dele, então verificamos se essas variáveis são válidas:
+    const user = await usersRepository.findOne(user_id);
+  O findOne procura por um usuário. Se não encontrou retorna um erro.
+  Verificamos se o usuário já tinha um avatar para deletarmos o anterior:
+    Como já temos o caminho correto do avatar em src/config/upload.ts, faremos algumas alterações para buscarmos essa informação:
+      - Em src/config/upload.ts:
+          Criamos tmpFolder com o caminho e passamos para a função.
+          Criamos também o directory com tmpFolder para podermos acessá-lo.
+          Ficando assim:
+            import path from 'path';
+            import crypto from 'crypto';
+            import multer from 'multer';
+
+            const tmpFolder = path.resolve(__dirname, '..', '..', 'tmp');
+
+            export default {
+              directory: tmpFolder,
+              storage: multer.diskStorage({
+                destination: tmpFolder,
+                filename(request, file, callback) {
+                  const filehash = crypto.randomBytes(10).toString('hex');
+                  const filename = `${filehash}-${file.originalname}`;
+                  
+                  return callback(null, filename);
+                }
+              }),
+            };
+    
+- Voltando ao "se o usuário já tinha um avatar" src/services/UpdateUserAvatarService.ts:
+    if (user.avatar) {
+      const userAvatarFilePath = path.join(uploadConfig.directory, user.avatar);
+    }
+
+    O join une dois caminhos: o diretório com o arquivo que excluiremos.
+
+  - Importamos fs do Node para trabalhar com arquivos (file system)
+      import fs from 'fs';
+    
+      fs.promises.stat:
+        fs: file system do Node
+        promises: garante que estaremos usando as funções do fs em formato de promise ao invés de callback assim conseguimos usar await para aguardar o resultado.
+        stat: traz o status do arquivo somente se ele existir
+        unlink: para deletar
+    
+  - Checando se esse arquivo realmente existe:
+      const userAvatarFileExists = await fs.promises.stat(userAvatarFilePath);
+
+      Caso exista, deletaremos:
+        if(userAvatarFileExists) {
+          fs.promises.unlink(userAvatarFilePath);
+        }
+
+  Agora que o arquivo já foi deletado, podemos atualizar o avatar pegando o repositório e atualizando com usersRepository.update porém já temos o user e o usersRepository:
+    Passamos o novo arquivo para o campo avatar de user:
+      user.avatar = avatarFilename;
+    E salvamos o novo avatar, atualizando o usuário no DB:
+      await usersRepository.save(user);
+
+    O save funciona para criar um usuário verificando o parâmetro (user) se tem um id e atualiza, se não tiver ele cria esse usuário.
+
+    Retornamos user e precisamos informar o retorno da Promise que estava como void:
+      return user;
+      public async execute({ user_id, avatarFilename }: Request): Promise<User> {
+
+- Em src/routes/users.routes.ts:
+  - Pegamos o user:
+      const user = await updateUserAVatar.execute({
+  
+  - Deletamos o password do retorno:
+      delete user.password;
+  
+  - Retornamos no json:
+      return response.json(user);
+
+
+
+ROTAS PARA VERMOS OS ARQUIVOS DE UPLOAD
+=======================================
+- Em src/server.ts:
+    - Importamos directory:
+        import uploadConfig from './config/upload';
+    - Especificamos a rota /files que mostrará o próprio arquivo :
+        app.use('/files', express.static(uploadConfig.directory));
+      express.static: serve uma pasta de forma estática
+    
+    No navegador acessamos a rota http://localhost:3333/files/<nome_da_imagem> que está no campo avatar. Exemplo:
+    http://localhost:3333/files/932826b37891eaf95ac2-Perfil3.jpg
+
+
+TRATANDO EXCESSÕES (EXCEPTION HANDLING)
+=======================================
+  EXCEPTION HANDLING: Lidar com erros na aplicação
+  Criamos classes de erro para termos a flexibilidade de modificarmos as mensagens e comportamentos de como os erro são gerados, bem como manipular o status_code.
+  - Criando a classse principal de erro:
+    - Crie o arquivo src/errors/AppError.ts:
+        class AppError {
+          public readonly message: string;
+          
+          public readonly statusCode: number;
+
+          constructor(message: string, statusCode = 400) {
+            this.message = message;
+            this.statusCode = statusCode;
+          }
+        }
+
+        export default AppError;
+
+=======================================
+=  Para os arquivos em src/services:  =
+=======================================
+  - Importamos o AppError:
+      import AppError from '../errors/AppError';
+
+- Em src/services/AuthenticateUserService.ts:
+  - Troque Error por AppError nos dois lugares
+  - Após a mensagem de erro coloque um outro parâmetro com erro 401:
+      throw new AppError("Invalid email or password", 401);
+
+- Em src/services/CreateAppointmentService.ts:
+    if (findAppointmentInSameDate) {
+      throw new AppError("This appointment is already booked");
+    }
+
+- Em src/services/CreateUserService.ts:
+    if (checkUserExists) {
+      throw new AppError('Email address already used.');
+    }
+
+- Em src/services/UpdateUserAvatarService.ts:
+    if (!user) {
+      throw new AppError("Only authenticated users can change.", 401);
+    }
+
+Alteramos também no middleware:
+- Em src/middlewares/ensureAuthenticated.ts:
+    import AppError from '../errors/AppError';
+
+    if (!authHeader) {
+      throw new AppError("JWT token is missing", 401);
+    }
+   
+    catch {
+      throw new AppError("Invalid JWT token", 401);
+    }
+
+Para que os novos status code sejam mostrados precisamos informar nas rotas:
+  - Em src/routes/sessions.routes.ts:
+    - Altere:
+        return response.status(400).json({ error: err.message });
+      Por:
+        return response.status(err.statusCode).json({ error: err.message });
+  Agora quando um erro for gerado a aplicação retornará os novos status code.
+
+
+LIDANDO COM ERROS
+=================
+Global Exception Handler: um middleware que vai captar todos os erros da aplicação independente de onde vieram e vão cair em um ponto central onde podemos manipulá-los como quisermos.
+Para começar, vamos retirar DE TODOS OS ARQUIVOS DE ROTAS os try/catch.
+
+- Em src/routes/appointments.routes.ts:
+    appointmentsRouter.post('/', async (request, response) => {
+        const { provider_id, date } = request.body;
+        const parsedDate = parseISO(date);
+        const createAppointment = new CreateAppointmentService();
+        const appointment = await createAppointment.execute({ date: parsedDate, provider_id });
+
+        return response.json(appointment);
+    });
+
+- Em src/routes/sessions.routes.ts:
+    sessionsRouter.post('/', async (request, response) => {
+      const { email, password } = request.body;
+      const authenticateUSer = new AuthenticateUserService();
+
+      const { user, token } = await authenticateUSer.execute({
+        email,
+        password,
+      });
+      delete user.password;
+
+      return response.json({ user, token });
+    });
+
+- Em src/routes/users.routes.ts:
+    usersRouter.post('/', async (request, response) => {
+      const { name, email, password } = request.body;
+      const createUser = new CreateUserService();
+      const user = await createUser.execute({
+        name,
+        email,
+        password,
+      });
+      delete user.password;
+
+      return response.json(user);
+    });
+
+    usersRouter.patch('/avatar',
+      ensureAuthenticated,
+      upload.single('avatar'),
+      async (request, response) => {
+        const updateUserAVatar = new UpdateUserAvatarService();
+        const user = await updateUserAVatar.execute({
+          user_id: request.user.id,
+          avatarFilename: request.file.filename,
+        });
+        delete user.password;
+        return response.json(user);
+      });
+
+Agora criaremos um middleware de erro
+
+- Em src/server.ts:
+  - Exatamente depois de app.use(routes); :
+  Os middlewares para tratativas de erros no Express recebem 4 parâmetros e por isso se diferenciam dos demais:
+    app.use((err, request, response, next) => {
+
+    });
+  
+  - Vamos definir os tipos para os parâmetros:
+    - Importamos os tipos e a classe AppError:
+        import express, { Request, Response, NextFunction } from 'express';
+        import AppError from './errors/AppError';
+
+      app.use((err: Error, request: Request, response: Response, next: NextFunction) => {
+        
+      });
+
+      Se foi um erro gerado pela aplicação (se é uma instância de AppError). Se for, devolveremos esse erro uma forma amigável ao frontend para que possa ser feita a tratativa da exceção.
+      Essa é a nossa primeira tratativa de erro:
+        app.use((err: Error, request: Request, response: Response, next: NextFunction) => {
+          if(err instanceof AppError) {
+            return response.status(err.statusCode).json({
+              status: 'error',
+              message: err.message,
+            });
+          }
+
+          return response.status(500).json({
+            status: 'error',
+            message: 'Internal server error',
+          });
+        });
+
+  Quando utilizamos async/await o Express não consegue captar os erros que são gerados. Para isso iremos instalar um pacote:
+    yarn add express-async-errors
+  
+  - Importamos esse pacote logo após a importação do express:
+      import 'express-async-errors';
+
+No Insomnia enviaremos um email errado para a rota /sessions e devemos ter esse retorno:
+  O status code 401 e a resposta:
+  {
+    "status": "error",
+    "message": "Invalid email or password"
+  }
+
+Se tiver algum erro inesperado o retorno será:
+  O status code 500 e a resposta:
+  {
+    "status": "error",
+    "message": "Internal server error"
+  }
+
+
+
+****************************************************
+*                                                  *
+*    APÓS AS MUDANÇAS OS ARQUIVOS FICARAM ASSIM    *
+*                                                  *
+****************************************************
+
+- Em src/server.ts:
+    import 'reflect-metadata';
+    import express, { Request, Response, NextFunction } from 'express';
+    import 'express-async-errors'
+    import routes from './routes';
+    import './database';
+    import uploadConfig from './config/upload';
+    import AppError from './errors/AppError';
+
+    const app = express();
+    app.use(express.json());
+    app.use('/files', express.static(uploadConfig.directory));
+    app.use(routes);
+
+    app.use((err: Error, request: Request, response: Response, next: NextFunction) => {
+      if (err instanceof AppError) {
+        return response.status(err.statusCode).json({
+          status: 'error',
+          message: err.message,
+        });
+      }
+
+      return response.status(500).json({
+        status: 'error',
+        message: 'Internal server error',
+      });
+    });
+
+    app.listen(3333, () => {
+      console.log('Server started on port 3333');
+    });
+
+- Em src/routes/index.ts:
+    import { Router } from 'express';
+    import appointmentsRouter from './appointments.routes';
+    import usersRouter from './users.routes';
+    import sessionsRouter from './sessions.routes';
+
+    const routes = Router();
+
+    routes.use('/appointments', appointmentsRouter);
+    routes.use('/users', usersRouter);
+    routes.use('/sessions', sessionsRouter);
+
+    export default routes;
+
+- Em src/routes/sessions.routes.ts:
+    import { Router } from 'express';
+    import AuthenticateUserService from '../services/AuthenticateUserService';
+
+    const sessionsRouter = Router();
+
+    sessionsRouter.post('/', async (request, response) => {
+      const { email, password } = request.booody;
+      const authenticateUSer = new AuthenticateUserService();
+
+      const { user, token } = await authenticateUSer.execute({
+        email,
+        password,
+      });
+      delete user.password;
+
+      return response.json({ user, token });
+    });
+
+    export default sessionsRouter;
+
+- Em src/routes/users.routes.ts:
+    import { Router, response } from 'express';
+    import CreateUserService from '../services/CreateUserService';
+    import ensureAuthenticated from '../middlewares/ensureAuthenticated';
+    import multer from 'multer';
+    import uploadConfig from '../config/upload';
+    import UpdateUserAvatarService from '../services/UpdateUserAvatarService';
+
+    const usersRouter = Router();
+    const upload = multer(uploadConfig);
+
+    usersRouter.post('/', async (request, response) => {
+      const { name, email, password } = request.body;
+      const createUser = new CreateUserService();
+      const user = await createUser.execute({
+        name,
+        email,
+        password,
+      });
+      delete user.password;
+
+      return response.json(user);
+    });
+
+    usersRouter.patch('/avatar',
+      ensureAuthenticated,
+      upload.single('avatar'),
+      async (request, response) => {
+        const updateUserAVatar = new UpdateUserAvatarService();
+        const user = await updateUserAVatar.execute({
+          user_id: request.user.id,
+          avatarFilename: request.file.filename,
+        });
+        delete user.password;
+        return response.json(user);
+      });
+
+    export default usersRouter;
+
+- Em src/routes/appointments.routes.ts:
+    import { Router } from 'express';
+    import { getCustomRepository } from 'typeorm';
+    import { parseISO } from 'date-fns';
+    import AppointmentsRepository from '../repositories/AppointmentsRepository';
+    import CreateAppointmentService from '../services/CreateAppointmentService';
+    import ensureAuthenticated from '../middlewares/ensureAuthenticated';
+
+    const appointmentsRouter = Router();
+
+    appointmentsRouter.use(ensureAuthenticated);
+
+    appointmentsRouter.get('/', async (request, response) => {
+        const appointmentsRepository = getCustomRepository(AppointmentsRepository);
+        const appointments = await appointmentsRepository.find();
+        return response.json(appointments);
+    });
+
+    appointmentsRouter.post('/', async (request, response) => {
+        const { provider_id, date } = request.body;
+        const parsedDate = parseISO(date);
+        const createAppointment = new CreateAppointmentService();
+        const appointment = await createAppointment.execute({ date: parsedDate, provider_id });
+
+        return response.json(appointment);
+    });
+
+    export default appointmentsRouter;
+
+- Em src/config/auth.ts:
+    export default {
+      jwt: {
+        secret: 'f60981211c42664d9eb97e22a047f966',
+        expiresIn: '1d',
+      },
+    };
+
+- Em src/config/upload.ts:
+    import path from 'path';
+    import crypto from 'crypto';
+    import multer from 'multer';
+
+    const tmpFolder = path.resolve(__dirname, '..', '..', 'tmp');
+
+    export default {
+      directory: tmpFolder,
+      storage: multer.diskStorage({
+        destination: tmpFolder,
+        filename(request, file, callback) {
+          const filehash = crypto.randomBytes(10).toString('hex');
+          const filename = `${filehash}-${file.originalname}`;
+          
+          return callback(null, filename);
+        }
+      }),
+    };
+
+- Em src/errors/AppError.ts:
+    class AppError {
+      public readonly message: string;
+      
+      public readonly statusCode: number;
+
+      constructor(message: string, statusCode = 400) {
+        this.message = message;
+        this.statusCode = statusCode;
+      }
+    }
+
+    export default AppError;
+
+- Em src/@types/express.d.ts:
+    declare namespace Express {
+      export interface Request {
+        user: {
+          id: string;
+        };
+      }
+    }
+
+- Em src/models/User.ts:
+    import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+
+    @Entity('users')
+    class User {
+        @PrimaryGeneratedColumn('uuid')
+        id: string;
+
+        @Column()
+        name: string;
+        
+        @Column()
+        email: string;
+
+        @Column()
+        password: string;
+
+        @Column()
+        avatar: string;
+
+        @CreateDateColumn()
+        created_at: Date;
+
+        @UpdateDateColumn()
+        updated_at: Date;
+    }
+
+    export default User;
+
+- Em src/middlewares/ensureAuthenticated.ts:
+    import { Request, Response, NextFunction } from 'express';
+    import { verify } from 'jsonwebtoken';
+    import authconfig from '../config/auth';
+    import AppError from '../errors/AppError';
+
+    interface TokenPayload {
+      iat: number;
+      exp: number;
+      sub: string;
+    }
+
+    export default function ensureAuthenticated(
+      request: Request,
+      response: Response,
+      next: NextFunction
+    ): void {
+      const authHeader = request.headers.authorization;
+      if (!authHeader) {
+        throw new AppError("JWT token is missing", 401);
+      }
+
+      const [, token] = authHeader.split(' ');
+      try {
+        const decoded = verify(token, authconfig.jwt.secret);
+        const { sub } = decoded as TokenPayload;
+        
+        request.user = {
+          id: sub,
+        };
+
+        return next();
+      } catch {
+        throw new AppError("Invalid JWT token", 401);
+      }
+    }
+
+- Em src/services/AuthenticateUserService.ts:
+    import { getRepository } from 'typeorm';
+    import User from '../models/User';
+    import { compare } from 'bcryptjs';
+    import { sign } from 'jsonwebtoken';
+    import authconfig from '../config/auth';
+    import AppError from '../errors/AppError';
+
+    interface Request {
+      email: string;
+      password: string;
+    }
+
+    interface Response {
+      user: User;
+      token: string;
+    }
+
+    class AuthenticateUserService {
+      public async execute({ email, password }: Request): Promise<Response> {
+        const usersRepository = getRepository(User);
+        const user = await usersRepository.findOne({ where: { email } });
+        if (!user) {
+          throw new AppError("Invalid email or password", 401);
+        }
+
+        const passwordMatched = await compare(password, user.password);
+        if (!passwordMatched) {
+          throw new AppError("Invalid email or password", 401);
+        }
+
+        const { secret, expiresIn } = authconfig.jwt;
+        const token = sign({}, secret, {
+          subject: user.id,
+          expiresIn,
+        });
+
+        return { user, token };
+      }
+    }
+
+    export default AuthenticateUserService;
+
+- Em src/services/CreateAppointmentService.ts:
+    // Responsável pela criação de agendamento
+    import { startOfHour } from 'date-fns';
+    import { getCustomRepository } from 'typeorm';
+
+    import Appointment from '../models/Appointment';
+    import AppointmentsRepository from '../repositories/AppointmentsRepository';
+    import AppError from '../errors/AppError';
+
+    interface Request {
+      provider_id: string;
+      date: Date;
+    }
+
+    class CreateAppointmentService {
+      public async execute({ date, provider_id }: Request): Promise<Appointment> {
+        const appointmentsRepository = getCustomRepository(AppointmentsRepository);
+        const appointmentDate = startOfHour(date);
+        const findAppointmentInSameDate = await appointmentsRepository.findByDate(
+          appointmentDate,
+        );
+
+        if (findAppointmentInSameDate) {
+          throw new AppError("This appointment is already booked");
+        }
+
+        const appointment = appointmentsRepository.create({
+          provider_id,
+          date: appointmentDate,
+        });
+
+        await appointmentsRepository.save(appointment);
+
+        return appointment;
+      }
+    }
+
+    export default CreateAppointmentService;
+
+- Em src/services/CreateUserService.ts:
+    import { getRepository } from 'typeorm';
+    import User from '../models/User';
+    import { hash } from 'bcryptjs';
+    import AppError from '../errors/AppError';
+
+
+    interface Request {
+      name: string;
+      email: string;
+      password: string;
+    }
+
+    class CreateUserService {
+      public async execute({ name, email, password }: Request): Promise<User> {
+        const usersRepository = getRepository(User);
+
+        const checkUserExists = await usersRepository.findOne({
+          where: { email },
+        });
+        if (checkUserExists) {
+          throw new AppError('Email address already used.');
+        }
+
+        const hashedPassword = await hash(password, 8);
+
+        const user = usersRepository.create({
+          name,
+          email,
+          password: hashedPassword,
+        });
+
+        await usersRepository.save(user);
+
+        return user;
+      }
+    }
+
+    export default CreateUserService;
+
+- Em src/services/UpdateUserAvatarService.ts:
+    import { getRepository } from 'typeorm';
+    import path from 'path';
+    import User from '../models/User';
+    import uploadConfig from '../config/upload';
+    import fs from 'fs';
+    import AppError from '../errors/AppError';
+
+
+    interface Request {
+      user_id: string;
+      avatarFilename: string;
+    }
+
+    class UpdateUserAvatarService {
+      public async execute({ user_id, avatarFilename }: Request): Promise<User> {
+        const usersRepository = getRepository(User);
+        const user = await usersRepository.findOne(user_id);
+        if (!user) {
+          throw new AppError("Only authenticated users can change.", 401);
+        }
+        if (user.avatar) {
+          const userAvatarFilePath = path.join(uploadConfig.directory, user.avatar);
+          const userAvatarFileExists = await fs.promises.stat(userAvatarFilePath);
+          if(userAvatarFileExists) {
+            fs.promises.unlink(userAvatarFilePath);
+          }
+        }
+        user.avatar = avatarFilename;
+        await usersRepository.save(user);
+
+        return user;
+      }
+    }
+
+    export default UpdateUserAvatarService;
+
+- Em .gitignore:
+    node_modules/
+    .idea/
+    tmp/*
+    !tmp/.gitkeep
+
+
