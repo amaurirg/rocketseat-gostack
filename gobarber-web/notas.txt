@@ -783,8 +783,243 @@ Agora precisamos informar quais campos serão monitorados pelo UnForm no submit.
               document.querySelector('input').value
         [fieldName, registerField]: informamos que estamos utilizando as variáveis
 
-        No momento que demos o submit, o unForm foi em cada um dos inputs que foram registrados, acessou o elemento e pegou os valores(value)
+        No momento que demos o submit, o unForm foi em cada um dos inputs que foram registrados, acessou o elemento e pegou os valores(value) e retornou um campo com o nome exatamente como foi passado no fieldName:
+          {name: "AMAURI ROSSETTI GIOVANI", email: "amauri.giovani@gmail.com", password: "123"}
+          name: é o que está em fieldName
+          ref: é o que dá acesso ao input no HTML
+          path: é onde ele vai buscar esse valor
 
   Se preenchermos o form de cadastro podemos ver no console.log os dados preenchidos.
+
+  Se quisermos setar um valor defaul para o input, usamos o defaultValue:
+    <input defaultValue={defaultValue} ref={inputRef} {...rest} />
+
+    Agora se quiséssemos preencher o defaultValue colocaríamos em src/pages/SignUp/index.tsx:
+      - Na tag <Form> colocamos:
+        <Form initialData={{ name: 'Amauri' }} onSubmit={handleSubmit}>
+      Colocamos duas chaves porque a primeira indica que estamos passando um código JS dentro do código HTML e a segunda indica que estamos passando um objeto do JS mesmo {name: 'Amauri'} onde name é o mesmo name do input. Agora quando o input for mostrado em tela virá preenchido com 'Amauri'.
+
+Vamos colocar uma borda no input e no ícone mas não podemos utilizar o focus tradicional no css do input:
+    &:focus {
+      background: #fff;
+    }
+Precisaremos colocar para o container, então mexeremos no src/components/Input/index.tsx:
+  onFocus={} => para saber quando o input recebeu foco, ou seja clicado
+  onBlur={} => para saber quando o input perdeu foco, ou seja o usuário saiu do input
+
+- Vamos utilizar o useState para armazenar os estados do input:
+    import React, { InputHTMLAttributes, useEffect, useRef, useState } from 'react';
+
+- Inicializamos o valor do focus como false:
+    const [isFocused, setIsFocused] = useState(false);
+
+- Vamos receber o estado do focus, lembrando que temos que criar um função (arrow function) para não executar assim que o input for mostrado em tela:
+  onFocus={() => setIsFocused(true)}
+  onBlur={() => setIsFocused(false)}
+
+- Passaremos para o <Container> porque ele que conseguirá estilizar lá dentro:
+    <Container isFocused={isFocused}>
+  
+  Porém <Container> não tem a propriedade isFocused, então criaremos uma interface em src/components/Input/styles.ts:
+  interface ContainerProps {
+    isFocused: boolean;
+  }
+
+E passamos como parâmetro:
+  export const Container = styled.div<ContainerProps>`
+
+Agora importamos css, pegamos as props e quando isFocused for true, substituiremos as cores da borda e do ícone:
+  import styled, { css } from 'styled-components';
+
+  ${(props) =>
+    props.isFocused && css`
+      color: #ff9000;
+      border-color: #ff9000;
+  `}
+
+Agora vamos mexer no onBlur para quando perder o foco. Criaremos uma nova função dentro da função existente const Input: React.FC<InputProps> ... :
+  function handleInputBlur() {
+    setIsFocused(false)
+  }
+  
+  Substituiremos:
+    onBlur={() => setIsFocused(false)}
+  Por:
+    onBlur={handleInputBlur}
+
+IMPORTANTE!!!
+=============
+No JS, quando criamos uma função dentro de outra, toda vez que a função Input for chamada ela irá recriar a função handleInputBlur na memória. Não tem muito problema na questão visual porém no React sempre que alteramos um estado, propriedade ou um componente pai ele é renderizado novamente.
+A melhor forma de fazermos é:
+  "SEMPRE QUE UMA FUNÇÃO FOR CRIADA DENTRO DE UM COMPONENTE, NÓS NÃO VAMOS CRIAR ELA COMO UMA FUNCTION, UTILIZAREMOS UM HOOK DO REACT CHAMADO useCallback".
+Esse useCallback é uma forma de criarmos funções dentro do nosso componente que não são recriadas na memória toda vez que o componente atualiza. Elas são memorizadas, ficam salvas na memória e se precisarem alterar conseguimos dizer pra elas "agora que você recarregue". Entenderemos no decorrer do curso.
+
+- Vamos alterar a function:
+    function handleInputBlur() {
+      setIsFocused(false)
+    }
+
+  Por:
+    const handleInputBlur = useCallback(() => {
+      setIsFocused(false)
+    }, []);
+
+  O useCallback recebe dois parâmetros, assim como useEffect. No segundo não passaremos nada, deixando o array vazio.
+  Então ele criará uma função e ele só vai recriá-la se as variáveis desse array forem alteradas. Como o array estará vazio, ele nunca irá recriá-la.
+
+- Faremos para onFocus também:
+    const handleInputFocus = useCallback(() => {
+      setIsFocused(true);
+    }, []);
+
+    onFocus={handleInputFocus}
+
+    Assim garantimos que essa função será criada uma única vez independente de quantas vezes o componente for atualizado ou renderizado.
+
+Agora vamos deixar somente o ícone, sem a borda, com a nova cor sempre que o input perder o foco e estiver preenchido.
+- Criamos um novo estado para armazenar quando o input estiver preenchido:
+    const [isFilled, setIsFilled] = useState(false);
+
+- Faremos uma verificação para saber se o input está preenchido. Utilizaremos inputRef.current porém o React não sabe o que é isso. Precisamos informar que essa referência (inputRef) está armazenando o valor de um input. Como fazemos isso? Passamos um parâmetro (<HTMLInputElement>) para dizer à nossa referência que ela está armazenando a referência de um input dentro do HTML. Agora temos acesso ao input, bem como ao seu value (inputRef.current.value):
+  if(inputRef.current?.value) {
+    setIsFilled(true);
+  } else {
+    setIsFilled(false);
+  }
+
+  Utilizamos a interrogação em inputRef.current?.value porque seu valor inicial é nulo, então se ele tiver um valor aí sim faremos a verificação do value dele.
+  Se conter um valor seta o valor para true e caso contrário seta para false.
+
+Conseguimos reduzir esse código utilizando transformando-o em booleano:
+  setIsFilled(!!inputRef.current?.value);
+
+  Se o inputRef tiver algum valor ele retorna true e caso contrário retorna false.
+
+- Em src/components/Input/index.tsx precisamos passar o isFilled para o Container:
+    <Container isFilled={isFilled} isFocused={isFocused}>
+
+- Em src/components/Input/styles.ts
+  - Informamos isFilled na interface:
+      interface ContainerProps {
+        isFocused: boolean;
+        isFilled: boolean;
+      }
+
+  - Dentro do estilo do Container deixamos somente o ícone com a cor laranja:
+    ${(props) =>
+      props.isFilled && css`
+        color: #ff9000;
+    `}
+
+Agora, quando preenchermos o input e sairmos dele o ícone ficará laranja e se não preenchermos e sairmos ele volta a cor normal.
+
+
+*****************************
+* OS ARQUIVOS FICARAM ASSIM *
+*****************************
+
+- Em src/components/Input/index.tsx:
+    import React, { InputHTMLAttributes, useEffect, useRef, useState, useCallback } from 'react';
+    import { useField } from '@unform/core';
+    import { IconBaseProps } from 'react-icons';
+    import { Container } from './styles';
+
+    interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
+      name: string;
+      icon?: React.ComponentType<IconBaseProps>;
+    }
+
+    const Input: React.FC<InputProps> = ({ name, icon: Icon, ...rest }) => {
+      const inputRef = useRef<HTMLInputElement>(null);
+      const [isFocused, setIsFocused] = useState(false);
+      const [isFilled, setIsFilled] = useState(false);
+      const { fieldName, defaultValue, error, registerField } = useField(name);
+
+      const handleInputFocus = useCallback(() => {
+        setIsFocused(true);
+      }, []);
+
+      const handleInputBlur = useCallback(() => {
+        setIsFocused(false)
+
+        setIsFilled(!!inputRef.current?.value);
+      }, []);
+
+      useEffect(() => {
+        registerField({
+          name: fieldName,
+          ref: inputRef.current,
+          path: 'value',
+        });
+      }, [fieldName, registerField]);
+
+      return (
+        <Container isFilled={isFilled} isFocused={isFocused}>
+          {Icon && <Icon size={20} />}
+          <input
+            onFocus={handleInputFocus}
+            onBlur={handleInputBlur}
+            defaultValue={defaultValue}
+            ref={inputRef}
+            {...rest} />
+        </Container>
+      );
+    };
+
+    export default Input;
+
+-Em src/components/Input/styles.ts:
+  import styled, { css } from 'styled-components';
+
+  interface ContainerProps {
+    isFocused: boolean;
+    isFilled: boolean;
+  }
+
+  export const Container = styled.div<ContainerProps>`
+      background: #232129;
+      border-radius: 10px;
+      border: 2px solid #232129;
+      padding: 12px;
+      width: 100%;
+      color: #666360;
+
+      display: flex;
+      align-items: center;
+
+      & + div {
+        margin-top: 8px;
+      }
+
+      ${(props) =>
+        props.isFocused && css`
+          color: #ff9000;
+          border-color: #ff9000;
+      `}
+
+      ${(props) =>
+        props.isFilled && css`
+          color: #ff9000;
+      `}
+
+    input {
+      flex: 1;
+      background: transparent;
+      border: 0;
+      color:#f4ede8;
+
+      &::placeholder {
+        color: #666360;
+      }
+
+    }
+    svg {
+      margin-right: 16px;
+    }
+  `;
+
+********************
+* FIM DOS ARQUIVOS *
+********************
 
 
