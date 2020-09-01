@@ -1741,4 +1741,46 @@ O CORS evita que sites que não sejam confiáveis da nossa aplicação possam ac
       
 
 
+CONTEXT API
+===========
+
+Serve para caso tivermos um estado armazenado em um componente e precisarmos passar para um outro.
+
+Imagina se quisermos criar um contexto de autenticação. Quando uma informação será utilizada por vários locais faz sentido criarmos esse contexto. Vamos criar um arquivo:
+- Em frontend/src/context/AuthContext.ts :
+  - Importamos o createContext:
+      import { createContext } from 'react';
+
+  - Criamos uma interface para informar qual que será o formato desse contexto:
+      interface AuthContextData {
+        name: string;
+      }
+
+  - Criamos um conexto:
+      const AuthContext = createContext<AuthContextData>();
+  
+      export default AuthContext;
+  
+  Porém dará um erro porque o Typescript espera como primeiro parâmetro um valor inicial do contexto mas pensando num contexto de autenticação o valor não pode ser algo como o nome do usuário({name: 'Amauri'}), então precisamos deixar isso vazio. Poderíamos fazer assim mas isso dará problemas futuros:
+    const AuthContext = createContext<AuthContextData | null>(null);
+  
+  Existe uma forma melhor de fazermos isso que burla o Typescript e assim ele deixa inicializar o contexto com um objeto vazio ({} as AuthContextData):
+  - Colocaremos isso:
+      import { createContext } from 'react';
+
+      interface AuthContextData {
+        name: string;
+      }
+
+      const AuthContext = createContext<AuthContextData>({} as AuthContextData);
+
+      export default AuthContext;
+
+
+
+
+
+
+
+
 
