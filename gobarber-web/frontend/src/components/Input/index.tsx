@@ -2,7 +2,7 @@ import React, { InputHTMLAttributes, useEffect, useRef, useState, useCallback } 
 import { useField } from '@unform/core';
 import { IconBaseProps } from 'react-icons';
 import { FiAlertCircle } from 'react-icons/fi';
-import Tooltip from '../Tooltip';
+// import Tooltip from '../Tooltip';
 import { Container, Error } from './styles';
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {

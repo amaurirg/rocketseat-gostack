@@ -1747,7 +1747,7 @@ CONTEXT API
 Serve para caso tivermos um estado armazenado em um componente e precisarmos passar para um outro.
 
 Imagina se quisermos criar um contexto de autenticação. Quando uma informação será utilizada por vários locais faz sentido criarmos esse contexto. Vamos criar um arquivo:
-- Em frontend/src/context/AuthContext.ts :
+- Em frontend/src/context/AuthContext.tsx :
   - Importamos o createContext:
       import { createContext } from 'react';
 
@@ -1756,12 +1756,12 @@ Imagina se quisermos criar um contexto de autenticação. Quando uma informaçã
         name: string;
       }
 
-  - Criamos um conexto:
+  - Criamos um contexto:
       const AuthContext = createContext<AuthContextData>();
   
       export default AuthContext;
   
-  Porém dará um erro porque o Typescript espera como primeiro parâmetro um valor inicial do contexto mas pensando num contexto de autenticação o valor não pode ser algo como o nome do usuário({name: 'Amauri'}), então precisamos deixar isso vazio. Poderíamos fazer assim mas isso dará problemas futuros:
+  Porém dará um erro porque o Typescript espera como primeiro parâmetro um valor inicial do contexto mas pensando num contexto de autenticação o valor inicial não pode ser algo como o nome do usuário({name: 'Amauri'}), então precisamos deixar isso vazio. Poderíamos fazer assim mas isso dará problemas futuros:
     const AuthContext = createContext<AuthContextData | null>(null);
   
   Existe uma forma melhor de fazermos isso que burla o Typescript e assim ele deixa inicializar o contexto com um objeto vazio ({} as AuthContextData):
@@ -1775,6 +1775,181 @@ Imagina se quisermos criar um contexto de autenticação. Quando uma informaçã
       const AuthContext = createContext<AuthContextData>({} as AuthContextData);
 
       export default AuthContext;
+
+- Em src/App.tsx:
+  - Importamos AuthContext:
+      import AuthCOntext from './context/AuthContext';
+
+  Dentro de AuthContext existem algumas propriedades, dentre elas a Provider que é a mais importante agora. AuthContext.Provider ele é um componente que vamos colocar por volta dos componentes que queremos que tenham acesso ao contexto de autenticação. Todo componente dentro dele terá acesso ao contexto de autenticação mas no AuthContext.Provider precisamos passar qual que é o valor do nosso contexto (value={{}}). Se usarmos CTRL+espaço veremos as opções.
+  Passando o value para AuthContext.Provider o SignIn já terá acesso.
+    const App: React.FC = () => (
+      <>
+        <AuthContext.Provider value={{ name: 'Amauri' }}>
+          <SignIn />
+        </AuthContext.Provider>
+
+        <GlobalStyle />
+      </>
+    );
+
+- Em frontend/src/pages/SignIn/index.tsx:
+  - Importamos useContext e AuthContext:
+      import React, { useCallback, useRef, useContext } from 'react';
+      import AuthContext from '../../context/AuthContext';
+
+    useContext: é um hook do React para termos acesso ao context
+
+  - No início do componente, onde está formRef:
+      const auth = useContext(AuthContext);
+      console.log(auth);
+
+    Podemos ver no console do navegador o objeto:
+      name: "Amauri"
+
+    E desestruturando retornará Amauri:
+      const { name } = useContext(AuthContext);
+      console.log(name);
+
+
+LOGIN PELO CONTEXTO
+===================
+
+Agora que já vimos como funciona o contexto, começaremos a fazer o login do GoBarber com ele.
+- Em frontend/src/context/AuthContext.tsx:
+    import React, { createContext, useCallback } from 'react';
+
+    interface AuthContextData {
+      name: string;
+      signIn(): void;
+    }
+
+    export const AuthContext = createContext<AuthContextData>({} as AuthContextData);
+
+    export const AuthProvider: React.FC = ({ children }) => {
+      const signIn = useCallback(() => {
+        console.log(signIn);
+      }, []);
+      
+      return (
+        <AuthContext.Provider value={{ name: 'Amauri', signIn }}>
+          {{ children }}
+        </AuthContext.Provider>
+      );
+    };
+
+  Criamos o componente AuthProvider que recebe children(tudo que receber como filho passamos para algum lugar dentro do context AuthProvider).
+  Criamos o método signIn que fará a autenticação na nossa aplicação (usando o useCallback porque está dentro de outra função) que por enquanto só terá um console.log().
+  Passamos o signIn para o AuthProvider e informamos na interface com tipo void(sem retorno).
+  Exportamos cada um colocando o export antes do const para importá-los em outro local dentro de chaves o que quisermos.
+  Ou seja, isolamos tudo que tem a ver com o contexto de autenticação, como o próprio valor inicial desse contexto, dentro desse arquivo de contexto facilitando a visualização e manutenção com organização.
+
+- Em frontend/src/App.tsx:
+    import React from 'react';
+    import SignIn from './pages/SignIn';
+    import GlobalStyle from './styles/global';
+    import { AuthProvider } from './context/AuthContext';
+
+    const App: React.FC = () => (
+      <>
+        <AuthProvider>
+          <SignIn />
+        </AuthProvider>
+
+        <GlobalStyle />
+      </>
+    );
+
+    export default App;
+
+  Importamos apenas o AuthProvider e o passamos para o App, ficando bem melhor.
+
+- Em frontend/src/pages/SignIn/index.tsx:
+  - Mudamos o import, colocando o AuthContext entre chaves para termos acesso ao contexto geral:
+      import { AuthContext } from '../../context/AuthContext';
+
+  - Agora temos acesso ao signIn:
+      const { signIn } = useContext(AuthContext);
+      console.log(signIn);
+
+    Vamos chamá-lo dentro do try de handleSubmit:
+      signIn();
+
+    Passar como dependência essa variável externa no final de handleSubmit:
+      }, [signIn]);
+
+  A resposta no console do browse será: signIn
+
+
+
+MELHORANDO SIGNIN
+=================
+
+- Instalar AXIOS:
+    yarn add axios
+
+- Em frontend/src/services/api.ts vamos criar a API:
+    import axios from 'axios';
+
+    const api = axios.create({
+      baseURL: 'http://localhost:3333',
+    });
+
+    export default api;
+
+- Em frontend/src/context/AuthContext.tsx:
+  - Importamos axios:  
+      import api from '../services/api';
+
+  - Transformamos a função em async/await pegando os dados vindos do formulário:
+        const signIn = useCallback(async ({ email, password }) => {
+          const response = await api.post('sessions', {
+            email, 
+            password
+          });
+          console.log(response.data);
+        }, []);
+
+    - Como usamos async/await precisamos informar que o retorno é uma Promise.
+    - Informamos o que signIn recebe na interface (credentials).
+    - E credentials precisa de uma interface falando qual que é o formato.
+      - Podemos ver essas mudanças abaixo:
+          interface SignInCredentials {
+            email: string;
+            password: string;
+          }
+
+          interface AuthContextData {
+            name: string;
+            signIn(credentials: SignInCredentials): Promise<void>;
+          }
+
+- Em frontend/src/pages/SignIn/index.tsx:
+  - Enviamos email e password que estão contidos no data:
+      signIn({
+        email: data.email,
+        password: data.password,
+      });
+  
+    - Precisamos criar uma interface para informar que data não é mais um object:
+        interface SignInFormData {
+          email: string;
+          password: string;
+        }
+
+Agora no console podemos ver os dados do usuário incluindo seu token.
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
