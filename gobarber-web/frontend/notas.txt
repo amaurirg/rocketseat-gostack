@@ -1725,6 +1725,9 @@ Como não temos rotas ainda, voltaremos a mostrar SignIn:
 
 
 
+CONECTANDO FRONTEND X BACKEND
+=============================
+
 AUTENTICAÇÃO
 ============
 
@@ -1939,15 +1942,84 @@ MELHORANDO SIGNIN
 Agora no console podemos ver os dados do usuário incluindo seu token.
 
 
+SALVANDO O USUÁRIO NO LOCALSTORAGE
+==================================
 
+- Em frontend/src/context/AuthContext.tsx:
+  - Depois que fizermos o processo de autenticação, iremos buscar os dados do usuário de dentro de response:
+      const { token, user } = response.data;
 
+    O Typescript reclamará que falta a tipagem mas não tem problema agora.
 
+  - Armazenamos no localStorage o token e o user.
+    O '@GoBarber:...' vai aparecer no localStorage do navegador e serve para diferenciar dos demais.
+    Como user é um objeto, precisamos transformá-lo em string usando JSON.stringify()
+      localStorage.setItem('@GoBarber:token', token);
+      localStorage.setItem('@GoBarber:user', JSON.stringify(user));
 
+  - Após isso armazenamos na nossa aplicação porque não vamos acessar esses dados do localStorage, não faz sentido, pois já temos esses dados no response.data. Então salvamos para depois passar via contexto para todos os componentes. Então criaremos estados:
+    import React, { createContext, useCallback, useState } from 'react';
 
+    - Em AuthProvider:
+      Poderíamos fazer assim já feito como anteriormente:
+        const [data, setData] = useState<AuthState>({} as AuthState);
+      
+      Mas inicializaremos essa variável utilizando uma função porque queremos buscar o valor dessa variável data no início baseado nos dados dentro do localStorage. Se já tiver preenchido o token e o user então já preenchemos o estado inicial dela com esses dados, caso contrário iniciamos com valor vazio.
+      - Verificamos se existe qa informação de token e user retornando o valor inicial para o estado do AuthState a informação de token e user sendo JSON.parse(user) para transformá-lo em objeto. Se não encontrou, retorna um objeto vazio como AuthState:
+        const [data, setData] = useState<AuthState>(() => {
+          const token = localStorage.getItem('@GoBarber:token');
+          const user = localStorage.getItem('@GoBarber:user');
 
+          if (token && user) {
+            return { token, user: JSON.parse(user) };
+          }
+          return {} as AuthState;
+        });
 
+        Essa lógica só será executada quando o usuário der um refresh na página ou quando ele sair e voltar para o software para carregar as informações que estão no storage.
+        O data nós iremos passá-lo no return em AuthContext.Provider:
+          <AuthContext.Provider value={{ user: data.user, signIn }}>
+        
+        E precisamos alterar a interface para torná-la dinâmica com o user:
+          interface AuthContextData {
+            user: object;
+            signIn(credentials: SignInCredentials): Promise<void>;
+          }
 
+      - Em signIn abaixo de response:
+          const { token, user } = response.data;
 
+          localStorage.setItem('@GoBarber:token', token);
+          localStorage.setItem('@GoBarber:user', JSON.stringify(user));
+
+          setData({ token, user });
+
+          No momento que fazemos o login, o estado useState<AuthState> já foi criado e o bloco de código não será executado, ou seja, não irá buscar novamente no localStorage. Então, logo depois de fazer o login vamos setar o estado de data preenchendo com token e user. Isso irá incluir esses dados enquanto nossa aplicação está executando.
+
+    - Criamos uma interface passando o user como object porque os dados podem ser alterados:
+        interface AuthState {
+          token: string;
+          user: object;
+        }
+
+- Em frontend/src/pages/SignIn/index.tsx:
+    const { user, signIn } = useContext(AuthContext);
+    console.log(user);
+
+    Resposta:
+      Undefined
+      Object
+        avatar: null
+        created_at: "2020-09-01T00:12:48.841Z"
+        email: "amauri@gmail.com"
+        id: "b24e17dc-ef4f-4216-ba48-2bcd1ebb4c9d"
+        name: "Amauri"
+        updated_at: "2020-09-01T00:12:48.841Z"
+        __proto__: Object
+
+      Primeiramente aparece como Undefined.
+      Após digitarmos os dados válidos retorna Object com os dados do usuário.
+      Ao fazermos o refresh da página ele já some o Undefined retornando apenas o Object porque agora já está salvo no localStorage. Podemos vê-lo acessando as Ferramentas do Desenvolvedor no navegador -> Application -> Local Storage.
 
 
 
