@@ -2021,13 +2021,237 @@ SALVANDO O USUÁRIO NO LOCALSTORAGE
       Após digitarmos os dados válidos retorna Object com os dados do usuário.
       Ao fazermos o refresh da página ele já some o Undefined retornando apenas o Object porque agora já está salvo no localStorage. Podemos vê-lo acessando as Ferramentas do Desenvolvedor no navegador -> Application -> Local Storage.
 
+    Vamos melhorar um pouquinho para ficar menos verboso o useContext(AuthContext):
+      Vamos substituir:
+        const { user, signIn } = useContext(AuthContext);
+
+      Por:
+        const { user, signIn } = useAuth();
+        
+      Assim já temos acesso a user e signIn.
+
+- Em frontend/src/context/AuthContext.tsx:
+
+Se o usuário utilizar o useAuth sem colocar o AuthProvider por volta do nosso App.tsx disparamos um erro porque o useAuth não existirá. Criaremos a função com isso:
+  export function useAuth(): AuthContextData {
+    const context = useContext(AuthContext);
+
+    if (!context) {
+      throw new Error('useAuth must be used within an AutProvider');
+    }
+    return context;
+  }
+
+  Não precisamos mais exportar AuthContext, então retiramos o export, deixando assim:
+    const AuthContext = createContext<AuthContextData>({} as AuthContextData);
+
+- Em frontend/src/pages/SignIn/index.tsx:
+  - Importamos apenas useAuth:
+    Substituímos:
+      import { AuthContext } from '../../context/AuthContext';
+
+    Por:
+      import { useAuth } from '../../context/AuthContext';
+
+  Agora já podemos utilizar user e singIn em:
+    const { user, signIn } = useAuth();
+    console.log(user);
+
+    Colocamos o console.log(user); somente para visualização e vamos retirá-lo.
+    Agora que vimos os dados de user no console vamos retirá-lo também.
+      const { signIn } = useAuth();
+
+    E podemos retirar o useContext do import:
+      import React, { useCallback, useRef } from 'react';
+
+
+
+LOGOUT DA APLICAÇÃO
+===================
+
+- Em frontend/src/context/AuthContext.tsx:
+  - Criamos o método para logout:
+      const signOut = useCallback(() => {
+        localStorage.removeItem('@GoBarber:token');
+        localStorage.removeItem('@GoBarber:user');
+
+        setData({} as AuthState);
+      }, []);
+
+  - Retornamos o signOut também:
+      <AuthContext.Provider value={{ user: data.user, signIn, signOut }}>
+
+  - Tipamos o signOut na interface AuthContextData:
+      signOut(): void;
+
+
+Renomeando a pasta frontend/src/context
+
+Alteramos o nome da pasta  para hooks porque toda a parte de contexto que formos criar terá um hook envolvido com ela. 
+Criamos um contexto de autenticação e criamos useAuth. Futuramente criaremos mais hooks.
 
 
 
 
+*****************************
+* OS ARQUIVOS FICARAM ASSIM *
+*****************************
+
+- Em frontend/src/App.tsx:
+    import React from 'react';
+    import SignIn from './pages/SignIn';
+    import GlobalStyle from './styles/global';
+    import { AuthProvider } from './hooks/AuthContext';
+
+    const App: React.FC = () => (
+      <>
+        <AuthProvider>
+          <SignIn />
+        </AuthProvider>
+
+        <GlobalStyle />
+      </>
+    );
+
+    export default App;
+
+- Em frontend/src/pages/SignIn/index.tsx:
+    import React, { useCallback, useRef } from 'react';
+    import { FormHandles } from '@unform/core';
+    import { Form } from '@unform/web';
+    import * as Yup from 'yup';
+    import { useAuth } from '../../hooks/AuthContext';
+    import getValidationErrors from '../../utils/getValidationErrors';
+    import { FiLogIn, FiMail, FiLock } from 'react-icons/fi';
+    import { Container, Content, Background } from './styles';
+    import logoImg from '../../assets/logo.svg';
+    import Input from '../../components/Input';
+    import Button from '../../components/Button';
+
+    interface SignInFormData {
+      email: string;
+      password: string;
+    }
+
+    const SignIn: React.FC = () => {
+      const formRef = useRef<FormHandles>(null);
+      const { user, signIn } = useAuth();
+      console.log(user);
+
+      const handleSubmit = useCallback(async (data: SignInFormData) => {
+        try {
+          formRef.current?.setErrors({});
+          const schema = Yup.object().shape({
+            email: Yup.string().required('E-mail obrigatório').email('Digite um e-mail válido'),
+            password: Yup.string().required('Senha obrigatória'),
+          });
+
+          await schema.validate(data, {
+            abortEarly: false,
+          });
+          signIn({
+            email: data.email,
+            password: data.password,
+          });
+        } catch (err) {
+          const errors = getValidationErrors(err);
+          formRef.current?.setErrors(errors);
+        }
+      }, [signIn]);
+
+      return (
+        <Container>
+          <Content>
+            <img src={logoImg} alt="GoBarber" />
+            <Form ref={formRef} onSubmit={handleSubmit}>
+              <h2>Faça seu login</h2>
+              <Input name="email" icon={FiMail} placeholder="E-mail" />
+              <Input name="password" icon={FiLock} type="password" placeholder="Senha" />
+              <Button type="submit">Entrar</Button>
+              <a href="forgot">Esqueci minha senha</a>
+            </Form>
+            <a href="login">
+              <FiLogIn />
+            Criar conta
+          </a>
+          </Content>
+          <Background />
+        </Container>
+      );
+    };
+
+    export default SignIn;
+
+- Em frontend/src/hooks/AuthContext.tsx:
+    import React, { createContext, useCallback, useState, useContext } from 'react';
+    import api from '../services/api';
+
+    interface AuthState {
+      token: string;
+      user: object;
+    }
+
+    interface SignInCredentials {
+      email: string;
+      password: string;
+    }
+
+    interface AuthContextData {
+      user: object;
+      signIn(credentials: SignInCredentials): Promise<void>;
+      signOut(): void;
+    }
+
+    const AuthContext = createContext<AuthContextData>({} as AuthContextData);
+
+    export const AuthProvider: React.FC = ({ children }) => {
+      const [data, setData] = useState<AuthState>(() => {
+        const token = localStorage.getItem('@GoBarber:token');
+        const user = localStorage.getItem('@GoBarber:user');
+
+        if (token && user) {
+          return { token, user: JSON.parse(user) };
+        }
+        return {} as AuthState;
+      });
+      const signIn = useCallback(async ({ email, password }) => {
+        const response = await api.post('sessions', {
+          email,
+          password
+        });
+        const { token, user } = response.data;
+
+        localStorage.setItem('@GoBarber:token', token);
+        localStorage.setItem('@GoBarber:user', JSON.stringify(user));
+
+        setData({ token, user });
+      }, []);
+
+      const signOut = useCallback(() => {
+        localStorage.removeItem('@GoBarber:token');
+        localStorage.removeItem('@GoBarber:user');
+
+        setData({} as AuthState);
+      }, []);
+
+      return (
+        <AuthContext.Provider value={{ user: data.user, signIn, signOut }}>
+          {children}
+        </AuthContext.Provider>
+      );
+    };
+
+    export function useAuth(): AuthContextData {
+      const context = useContext(AuthContext);
+
+      if (!context) {
+        throw new Error('useAuth must be used within an AutProvider');
+      }
+      return context;
+    }
 
 
-
-
-
+********************
+* FIM DOS ARQUIVOS *
+********************
 
