@@ -2255,3 +2255,403 @@ Criamos um contexto de autenticação e criamos useAuth. Futuramente criaremos m
 * FIM DOS ARQUIVOS *
 ********************
 
+
+MENSAGENS DE TOAST
+==================
+
+- Em frontend/src/pages/SignIn/index.tsx:
+  Fazemos uma verificação dentro do catch:
+    catch (err) {
+      if (err instanceof Yup.ValidationError) {
+        const errors = getValidationErrors(err);
+        formRef.current?.setErrors(errors);
+      }
+    }
+  
+  Vimos se o erro é uma instância de Yup.ValidationError. Se não for colocaremos uma mensagem um pouco mais genérica, disparando um toast.
+
+Vamos criar um novo componente em frontend/src/components com dois arquivos:
+  frontend/src/components/ToastContainer/index.tsx
+  frontend/src/components/ToastContainer/styles.ts
+
+- Em frontend/src/components/ToastContainer/styles.ts:
+    import styled from 'styled-components';
+
+    export const Container = styled.div``;
+
+- Em frontend/src/components/ToastContainer/index.tsx:
+    import React from 'react';
+    import { Container } from './styles';
+
+    const ToastContainer: React.FC = () => {
+      return (
+      <Container>
+      </Container>
+      );
+    }
+
+    export default ToastContainer;
+
+- Em frontend/src/App.tsx:
+    import React from 'react';
+    import SignIn from './pages/SignIn';
+    import GlobalStyle from './styles/global';
+    import { AuthProvider } from './hooks/AuthContext';
+    import ToastContainer from './components/ToastContainer';
+
+    const App: React.FC = () => (
+      <>
+        <AuthProvider>
+          <SignIn />
+        </AuthProvider>
+
+        <ToastContainer />
+
+        <GlobalStyle />
+      </>
+    );
+
+    export default App;
+
+- Em frontend/src/components/ToastContainer/index.tsx:
+    import React from 'react';
+    import { FiAlertCircle, FiXCircle } from 'react-icons/fi';
+    import { Container, Toast } from './styles';
+
+    const ToastContainer: React.FC = () => {
+      return (
+        <Container>
+          
+          <Toast hasDescription>
+            <FiAlertCircle size={20} />
+            <div>
+              <strong>Aconteceu um erro</strong>
+              <p>Não foi possível fazer login na aplicação</p>
+            </div>
+            <button type="button">
+              <FiXCircle size={18} />
+            </button>
+          </Toast>
+          
+          <Toast type='success' hasDescription={false}>
+            <FiAlertCircle size={20} />
+            <div>
+              <strong>Aconteceu um erro</strong>
+            </div>
+            <button type="button">
+              <FiXCircle size={18} />
+            </button>
+          </Toast>
+          
+          <Toast type='error' hasDescription>
+            <FiAlertCircle size={20} />
+            <div>
+              <strong>Aconteceu um erro</strong>
+              <p>Não foi possível fazer login na aplicação</p>
+            </div>
+            <button type="button">
+              <FiXCircle size={18} />
+            </button>
+          </Toast>
+        
+        </Container>
+      );
+    }
+
+    export default ToastContainer;
+
+    Criamos o componente Toast com mensagens estáticas para informação (default) que aparecerá para o usuário. Triplicamos-o para quando for erro ou sucesso atribuindo o type.
+    hasDescription={false} => mostra ou não a mensagem se for true não precisa {true}
+
+- Em frontend/src/components/ToastContainer/styles.ts:
+  Dentro do estilo de Toast poderíamos colocar assim para pegar as props:
+    ${(props) => props.type === 'success' && css`
+      background: #e6fffa;
+      color: #2e656a;
+    `}
+
+  Mas teríamos que fazer um para info, outro para error e outro para success. Vamos substituir esse código acima por esse que será explicado logo mais:
+    ${(props) => ToastTypeVariations[props.type || 'info']}
+  
+  Então vamos criar uma variável para os três tipos diminuindo e estruturando o código:
+    import styled, { css } from 'styled-components';
+
+    interface ToastProps {
+      type?: 'success' | 'error' | 'info';
+      hasDescription: boolean;
+    }
+
+    const ToastTypeVariations = {
+      info: css`
+        background: #ebf8ff;
+        color: #3172b7;
+      `,
+      success: css`
+        background: #e6fffa;
+        color: #2e656a;
+      `,
+      error: css`
+        background: #fddede;
+        color: #c53030;
+      `
+    };
+
+    Em export const Toast = styled.div<ToastProps>` passamos a tipagem dos tipos de informação que estão na interface.
+
+    E agora verificamos qual foi o tipo recebido e caso não tenha mostrará info (default):
+      ${(props) => ToastTypeVariations[props.type || 'info']}
+
+  O arquivo frontend/src/components/ToastContainer/styles.ts ficou assim:
+    import styled, { css } from 'styled-components';
+
+    interface ToastProps {
+      type?: 'success' | 'error' | 'info';
+      hasDescription: boolean;
+    }
+
+    export const Container = styled.div`
+      position: absolute;
+      right: 0;
+      top: 0;
+      padding: 30px;
+      overflow: hidden;
+    `;
+
+    const ToastTypeVariations = {
+      info: css`
+        background: #ebf8ff;
+        color: #3172b7;
+      `,
+      success: css`
+        background: #e6fffa;
+        color: #2e656a;
+      `,
+      error: css`
+        background: #fddede;
+        color: #c53030;
+      `
+    };
+
+    export const Toast = styled.div<ToastProps>`
+      width: 360px;
+      position: relative;
+      padding: 16px 30px 16px 16px;
+      border-radius: 10px;
+      box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.2);
+      display: flex;
+      font-size: 14px;
+      
+      & + div {
+        margin-top: 8px;
+      }
+
+      ${(props) => ToastTypeVariations[props.type || 'info']}
+
+      > svg {
+        margin: 4px 12px 0 0;
+      }
+
+      div {
+        flex: 1;
+
+        p {
+          margin-top: 4px;
+          font-size: 12px;
+          opacity: 0.8;
+          line-height: 20px;
+        }
+      }
+
+      button {
+        position: absolute;
+        right: 16px;
+        top: 19px;
+        opacity: 0.6;
+        border: 0;
+        background: transparent;
+        color: inherit;
+      }
+
+      ${(props) => !props.hasDescription && css`
+        align-items: center;
+
+        svg {
+          margin-top: 0;
+        }
+      `}
+    `;
+
+
+
+DEIXANDO AS MESSAGE TOASTS DINÂMICAS
+====================================
+
+Vamos construir um hook para que a utilização de toasts seja dinâmica de acordo com o que nossa aplicação precisar exibir e remover de tela. Para isso serão aplicados os mesmos conceitos de contexto usados anteriormente com a autenticação do usuário.
+
+- Vamos alterar o nome dentro de hooks:
+  De frontend/src/hooks/AuthContext.tsx para frontend/src/hooks/auth.tsx.
+  E mudar as importações em frontend/src/App.tsx e frontend/src/pages/SignIn/index.tsx.
+
+- Criar o arquivo frontend/src/hooks/toast.tsx:
+
+- Em frontend/src/App.tsx ficaria assim:
+    import React from 'react';
+    import SignIn from './pages/SignIn';
+    import GlobalStyle from './styles/global';
+    import { AuthProvider } from './hooks/auth';
+    import { ToastProvider } from './hooks/toast';
+    import ToastContainer from './components/ToastContainer';
+
+    const App: React.FC = () => (
+      <>
+        <AuthProvider>
+          <ToastProvider>
+            <SignIn />
+          </ToastProvider>
+        </AuthProvider>
+
+        <ToastContainer />
+
+        <GlobalStyle />
+      </>
+    );
+
+    export default App;
+
+  Mas não é a melhor prática porque poderemos ter mais Providers. Então vamos criar um novo arquivo para importar todos os Providers e voltar aqui para fazer as alterações.
+
+  - Criar o arquivo frontend/src/hooks/index.tsx:
+      import React from 'react';
+      import { AuthProvider } from './auth';
+      import { ToastProvider } from './toast';
+
+      const AppProvider: React.FC = ({ children }) => (
+        <AuthProvider>
+          <ToastProvider>{children}</ToastProvider>
+        </AuthProvider>
+      );
+
+      export default AppProvider;
+
+- Em frontend/src/App.tsx:
+    import React from 'react';
+    import SignIn from './pages/SignIn';
+    import GlobalStyle from './styles/global';
+    import AppProvider from './hooks';
+    import ToastContainer from './components/ToastContainer';
+
+    const App: React.FC = () => (
+      <>
+        <AppProvider>
+            <SignIn />
+        </AppProvider>
+
+        <ToastContainer />
+
+        <GlobalStyle />
+      </>
+    );
+
+    export default App;
+
+    Importamos apenas o AppProvider que trará todos os Providers contidos nele.
+
+Vamos melhorar um pouco mais. Se em algum momento não quisermos mais Toasts na aplicação ficará complicado dessa forma. Vamos manter as coisas mais isoladas. Tudo que for context vamos deixar dentro de hooks. O que for Toast em toast e o que for autenticação em auth.
+
+- Em frontend/src/hooks/toast.tsx passamos o <ToastContainer />:
+    <ToastContext.Provider value={{ addToast, removeToast }}>
+      {children}
+      <ToastContainer />
+    </ToastContext.Provider>
+
+- Em frontend/src/App.tsx:
+    Retiramos <ToastContainer /> e sua importação.
+
+- Em frontend/src/pages/SignIn/index.tsx:
+    import { useAuth } from '../../hooks/auth';
+    import { useToast } from '../../hooks/toast';
+
+    const { addToast } = useToast();
+
+    await signIn({
+
+        addToast();
+      }
+    }, [signIn, addToast]);
+
+    Pegamos o método addToast
+    Colocamos o await em signIn
+    Chamamos o método addToast
+    Passamos addToast no useCallback
+
+
+ADICIONANDO E REMOVENDO TOASTS
+==============================
+
+- Em frontend/src/hooks/toast.tsx:
+  - Criamos os estados das mensagens:
+      const [messages, setMessages] = useState([]);
+
+  - Criamos a interface para a tipagem:
+    interface ToastMessage {
+      id: string;
+      type?: 'success' | 'error' | 'info';
+      title: string;
+      description?: string;
+    }
+
+    Precisamos de um id para o key do map.
+
+  - Vamos instalar a biblioteca uuid:
+      yarn add uuidv4
+  
+  - Importamos uuid:
+      import {uuid} from 'uuidv4';
+
+  - Passamos a tipagem para o estado informando que ele armazena um array de mensagens:
+      const [messages, setMessages] = useState<ToastMessage[]>([]);
+
+  - Passamos message para useCallback pegando todas as propriedades de ToastMessage exceto o id:
+      const addToast = useCallback((message: Omit<ToastMessage, 'id'>) => {
+        const id = uuid();
+      }, [])
+
+  - Desestruturamos o message e criamos o objeto toast:
+      const addToast = useCallback(({ type, title, description }: Omit<ToastMessage, 'id'>) => {
+        const id = uuid();
+        const toast = {
+          id,
+          type,
+          title,
+          description,
+        };
+
+        setMessages([...messages, toast]);
+      }, []);
+
+      Para não perdermos tudo que já temos nos toasts, copiamos com (...messages) e colocamos o novo (toast) no final.
+
+      Ao invés de colocarmos messages na dependência de useCallback, criaremos uma função que pode ser chamada de oldMessages mas chamaremos de state. Fazendo dessa forma recebemos o estado anterior de messages:
+        setMessages((state) => [...state, toast]);
+      
+  - Precisamos informar na interface ToastContextData que addToast receberá a mensagem:
+      addToast(message: Omit<ToastMessage, 'id'>): void;
+
+  - Passamos messages para ToastContainer:
+      <ToastContainer messages={messages} />
+
+    Precisamos criar uma interface em frontend/src/components/ToastContainer/index.tsx. Vamos exportar a interface ToastMessage para reutilizá-la:
+      export interface ToastMessage {
+
+  - Em frontend/src/components/ToastContainer/index.tsx:
+      import { ToastMessage } from '../../hooks/toast';
+
+      interface ToastContainerProps {
+        messages: ToastMessage[];
+      }
+
+      const ToastContainer: React.FC<ToastContainerProps> = ({ messages }) => {
+
+    Reaproveitamos ToastMessage aqui após sua importação, passamos para ToastContainer e já teremos acesso as messages.
+
+
