@@ -2670,7 +2670,7 @@ ADICIONANDO TOASTS
         const { removeToast } = useToast();
         return (
           <Container>
-            {messages.map(message => (
+            {messages.map((message) => (
               <Toast key={message.id} type={message.type} hasDescription={!!message.description}>
                 <FiAlertCircle size={20} />
                 <div>
@@ -2839,7 +2839,6 @@ O arquivo frontend/src/components/ToastContainer/styles.ts ficou assim:
   
   O arquivo ficou assim:
     import React from 'react';
-    import { FiAlertCircle, FiXCircle } from 'react-icons/fi';
     import Toast from './Toast';
     import { ToastMessage } from '../../hooks/toast';
     import { Container } from './styles';
@@ -2876,7 +2875,7 @@ O arquivo frontend/src/components/ToastContainer/styles.ts ficou assim:
 
   - Colocamos o que pertence ao Toast em <Container> inclusive type e hasDescription porque é o <Container> que tem as variações de estilizações passando o retorno para Toast:
     const { removeToast } = useToast();
-      const Toast: React.FC<ToastProps> = () => {
+      const Toast: React.FC<ToastProps> = ({ message }) => {
         return (
           <Container type={message.type} hasDescription={!!message.description}>
             <FiAlertCircle size={20} />
@@ -2926,3 +2925,68 @@ O arquivo frontend/src/components/ToastContainer/styles.ts ficou assim:
       {icons[message.type || 'info']}
 
   Assim será mostrado o ícone correspondente ao seu tipo ou info por default.
+
+
+
+ANIMANDO TOASTS
+===============
+
+Faremos com que os Toasts Messages apareçam no canto superior direito entrando na tela de modo que estejam deslizando para a esquerda e saiam deslizando para a direita.
+
+Vamos instalar uma biblioteca de animações:
+  yarn add react-spring
+
+- Em frontend/src/components/ToastContainer/index.tsx que é o detentor das informações do Toast e da maneira como são exibidos em tela:
+  - Importamos useTransition:
+      import { useTransition } from 'react-spring';
+
+    useTransition permite controlar a transição de um elemento quando entra e sai da tela.
+
+  - Criamos a variável para as mensagens com transição:
+      const messagesWithTransition = useTransition(
+        messages,
+        (message) => message.id,
+        {
+          from: { right: '-120%' },
+          enter: { right: '-0%' },
+          leave: { right: '-120%' },
+        },
+      );
+
+    Parâmetros de useTransition:
+    - Primeiro: são as mensagens
+    - Segundo: uma função que vai obter qual a chave da mensagem, ou seja, é uma função que recebe cada uma das mensagens e retorna qual que é a informação única nessa mensagem, no caso o id.
+    - Terceiro: objeto contendo as animações.
+      from: a direita, fora da tela mais de 100%
+      enter: posição quando entrar em tela
+      leave: posição quando sair da tela
+
+  - Alteramos o return pois não recebemos apenas messages. Recebemos um objeto:
+      return (
+        <Container>
+          {messagesWithTransition.map(({item, key, props}) => (
+            <Toast key={key} style={props} message={item} />
+          ))}
+        </Container>
+      );
+
+      props: a estilização do right
+    
+- Em frontend/src/components/ToastContainer/Toast/index.tsx passamos o style na interface:
+    interface ToastProps {
+      message: ToastMessage;
+      style: object;
+    }
+
+  - Passamos o style para o <Container>:
+      <Container type={message.type} hasDescription={!!message.description} style={style}>
+
+  - Informamos o style:
+      const Toast: React.FC<ToastProps> = ({ message, style }) => {
+
+Quando utilizamos o react-spring não podemos utilizar essas animações em elementos tradicionais do HTML como por exemplo a própria <div>. Temos que importar o animated.
+- Em frontend/src/components/ToastContainer/Toast/styles.ts: 
+    import { animated } from 'react-spring';
+
+    export const Container = styled(animated.div)<ContainerProps>`
+
