@@ -2585,7 +2585,7 @@ Vamos melhorar um pouco mais. Se em algum momento não quisermos mais Toasts na 
     Passamos addToast no useCallback
 
 
-ADICIONANDO E REMOVENDO TOASTS
+ADICIONANDO TOASTS
 ==============================
 
 - Em frontend/src/hooks/toast.tsx:
@@ -2653,5 +2653,170 @@ ADICIONANDO E REMOVENDO TOASTS
       const ToastContainer: React.FC<ToastContainerProps> = ({ messages }) => {
 
     Reaproveitamos ToastMessage aqui após sua importação, passamos para ToastContainer e já teremos acesso as messages.
+
+    Vamos retirar dois toasts e vamos fazer um map incluindo o toast que sobrou:
+
+    O arquivo ficou assim:
+      import React from 'react';
+      import { FiAlertCircle, FiXCircle } from 'react-icons/fi';
+      import { ToastMessage, useToast } from '../../hooks/toast';
+      import { Container, Toast } from './styles';
+
+      interface ToastContainerProps {
+        messages: ToastMessage[];
+      }
+
+      const ToastContainer: React.FC<ToastContainerProps> = ({ messages }) => {
+        const { removeToast } = useToast();
+        return (
+          <Container>
+            {messages.map(message => (
+              <Toast key={message.id} type={message.type} hasDescription={!!message.description}>
+                <FiAlertCircle size={20} />
+                <div>
+                  <strong>{message.title}</strong>
+                  {message.description && <p>{message.description}</p>}
+                </div>
+                <button onClick={() => removeToast(message.id)} type="button">
+                  <FiXCircle size={18} />
+                </button>
+              </Toast>
+            ))}
+          </Container>
+        );
+      }
+
+      export default ToastContainer;
+
+- Em frontend/src/pages/SignIn/index.tsx:
+    Precisamos enviar o parâmetro em addToast():
+      addToast({
+        type: 'error',
+        title: 'Erro na autenticação',
+        description: 'Ocorreu um erro ao fazer login, cheque as credenciais',
+      });
+
+
+
+REMOVENDO TOASTS
+================
+
+Precisamos do id para remover o toast correto. Faremos um map com uma função para pegarmos o estado atual das mensagens. Pegaremos todos os toasts exceto o que iremos excluir com um filter:
+
+- Em frontend/src/hooks/toast.tsx:
+    const removeToast = useCallback((id: string) => {
+      setMessages(state => state.filter(message => message.id != id));
+    }, []);
+
+  - Informamos o tipo de removeToast na interface ToastContextData:
+      interface ToastContextData {
+        addToast(message: Omit<ToastMessage, 'id'>): void;
+        removeToast(id: string): void;
+      }
+
+- Em frontend/src/components/ToastContainer/index.tsx:
+  - Importamos useToast:
+      import { ToastMessage, useToast } from '../../hooks/toast';
+
+  - Pegamos removeToast de useToast:
+      const { removeToast } = useToast();
+
+  - Chamamos a função que criaremos handleRemoveToast:
+      <button onClick={() => removeToast(message.id)} type="button">
+
+Faremos com que os toasts sejam removidos automaticamente. Separaremos o Toast em um arquivo.
+
+- Criamos o arquivo frontend/src/components/ToastContainer/Toast/styles.ts:
+  - Copiamos de frontend/src/components/ToastContainer/styles.ts:
+      import styled, {css} from 'styled-components';
+
+
+      interface ToastProps {
+        type?: 'success' | 'error' | 'info';
+        hasDescription: boolean;
+      }
+
+      const ToastTypeVariations = {
+        info: css`
+          background: #ebf8ff;
+          color: #3172b7;
+        `,
+        success: css`
+          background: #e6fffa;
+          color: #2e656a;
+        `,
+        error: css`
+          background: #fddede;
+          color: #c53030;
+        `
+      };
+
+      export const Container = styled.div<ToastProps>`
+        width: 360px;
+        position: relative;
+        padding: 16px 30px 16px 16px;
+        border-radius: 10px;
+        box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.2);
+        display: flex;
+        font-size: 14px;
+        
+        & + div {
+          margin-top: 8px;
+        }
+
+        ${(props) => ToastTypeVariations[props.type || 'info']}
+
+        > svg {
+          margin: 4px 12px 0 0;
+        }
+
+        div {
+          flex: 1;
+
+          p {
+            margin-top: 4px;
+            font-size: 12px;
+            opacity: 0.8;
+            line-height: 20px;
+          }
+        }
+
+        button {
+          position: absolute;
+          right: 16px;
+          top: 19px;
+          opacity: 0.6;
+          border: 0;
+          background: transparent;
+          color: inherit;
+        }
+
+        ${(props) => !props.hasDescription && css`
+          align-items: center;
+
+          svg {
+            margin-top: 0;
+          }
+        `}
+      `;
+
+    Renomeamos o componente Toast para Container.
+
+O arquivo frontend/src/components/ToastContainer/styles.ts ficou assim:
+  import styled from 'styled-components';
+
+
+  export const Container = styled.div`
+    position: absolute;
+    right: 0;
+    top: 0;
+    padding: 30px;
+    overflow: hidden;
+    `;
+
+- Criamos o arquivo frontend/src/components/ToastContainer/Toast/index.tsx:
+
+
+
 
 
