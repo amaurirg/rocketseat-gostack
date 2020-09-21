@@ -1,7 +1,7 @@
 import styled, {css} from 'styled-components';
 
 
-interface ToastProps {
+interface ContainerProps {
   type?: 'success' | 'error' | 'info';
   hasDescription: boolean;
 }
@@ -21,7 +21,7 @@ const ToastTypeVariations = {
   `
 };
 
-export const Container = styled.div<ToastProps>`
+export const Container = styled.div<ContainerProps>`
   width: 360px;
   position: relative;
   padding: 16px 30px 16px 16px;

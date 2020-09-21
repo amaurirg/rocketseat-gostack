@@ -2688,6 +2688,9 @@ ADICIONANDO TOASTS
 
       export default ToastContainer;
 
+      Na linha <Toast key={message.id} type={message.type} hasDescription={!!message.description}> passamos o id para a key, o tipo da mensagem e fazemos uma verificação para saber se tem descrição retornando um boolean.
+      Na linha {message.description && <p>{message.description}</p>} verificamos se existe a descrição e só assim a mostramos em <p>.
+
 - Em frontend/src/pages/SignIn/index.tsx:
     Precisamos enviar o parâmetro em addToast():
       addToast({
@@ -2718,13 +2721,13 @@ Precisamos do id para remover o toast correto. Faremos um map com uma função p
   - Importamos useToast:
       import { ToastMessage, useToast } from '../../hooks/toast';
 
-  - Pegamos removeToast de useToast:
+  - Pegamos a função removeToast de useToast:
       const { removeToast } = useToast();
 
   - Chamamos a função que criaremos handleRemoveToast:
       <button onClick={() => removeToast(message.id)} type="button">
 
-Faremos com que os toasts sejam removidos automaticamente. Separaremos o Toast em um arquivo.
+- Faremos com que os toasts sejam removidos automaticamente. Separaremos o Toast em um arquivo.
 
 - Criamos o arquivo frontend/src/components/ToastContainer/Toast/styles.ts:
   - Copiamos de frontend/src/components/ToastContainer/styles.ts:
@@ -2814,9 +2817,112 @@ O arquivo frontend/src/components/ToastContainer/styles.ts ficou assim:
     overflow: hidden;
     `;
 
+- Em frontend/src/components/ToastContainer/index.tsx:
+  - Recortamos o que está dentro do componente Toast:
+      <FiAlertCircle size={20} />
+      <div>
+        <strong>{message.title}</strong>
+        {message.description && <p>{message.description}</p>}
+      </div>
+      <button onClick={() => removeToast(message.id)} type="button">
+        <FiXCircle size={18} />
+      </button>
+
+  - Recortamos também type e hasDescription:
+      type={message.type} hasDescription={!!message.description}
+    
+    E deixamos no lugar para enviar o message completo para termos acesso a todos os dados:
+      message={message}
+  
+  - Retiramos const { removeToast } = useToast(); e as importações.
+  - Importamos Toast.
+  
+  O arquivo ficou assim:
+    import React from 'react';
+    import { FiAlertCircle, FiXCircle } from 'react-icons/fi';
+    import Toast from './Toast';
+    import { ToastMessage } from '../../hooks/toast';
+    import { Container } from './styles';
+
+    interface ToastContainerProps {
+      messages: ToastMessage[];
+    }
+
+    const ToastContainer: React.FC<ToastContainerProps> = ({ messages }) => {
+      return (
+        <Container>
+          {messages.map((message) => (
+            <Toast key={message.id} toast={message} />
+          ))}
+        </Container>
+      );
+    }
+
+    export default ToastContainer;
+
+- Em frontend/src/components/ToastContainer/Toast/styles.ts:
+  - Alteramos o nome da interface de ToastProps para ContainerProps.
+
 - Criamos o arquivo frontend/src/components/ToastContainer/Toast/index.tsx:
+  - Importamos:
+      import React from 'react';
+      import { Container } from './styles';
+      import { ToastMessage } from '../../../hooks/toast';
 
+  - Criamos uma interface para a tipagem da mensagem:
+      interface ToastProps {
+        message: ToastMessage;
+      }
 
+  - Colocamos o que pertence ao Toast em <Container> inclusive type e hasDescription porque é o <Container> que tem as variações de estilizações passando o retorno para Toast:
+    const { removeToast } = useToast();
+      const Toast: React.FC<ToastProps> = () => {
+        return (
+          <Container type={message.type} hasDescription={!!message.description}>
+            <FiAlertCircle size={20} />
+            <div>
+              <strong>{message.title}</strong>
+              {message.description && <p>{message.description}</p>}
+            </div>
+            <button onClick={() => removeToast(message.id)} type="button">
+              <FiXCircle size={18} />
+            </button>
+          </Container>
+        );
+      }
 
+  - Exportamos o componente:
+      export default Toast;
 
+  Como é criado um novo Toast toda vez que um novo Toast surge, usaremos o useEffect para disparar uma ação assim que esse componente Toast for exibido em tela:
+    useEffect(() => {
+      const timer = setTimeout(() => {
+        removeToast(message.id);
+      }, 3000);
+    }, [removeToast, message.id]);
 
+  Agora imagine que aparece o toast na tela e antes dos 3 segundos o usuário clica no "X" para fechá-lo. Quando passar os 3 segundos o useEffect irá tentar remover o toast que já foi fechado pelo usuário. Hummm... Isso será um problema. Vamos fazer um return, retornando uma função, dentro do useEffect para que seja executado automaticamente mesmo que o componente já tenha sido fechado, deixado de existir. Esse tipo de return com função dentro do useEffect é padrão no React.
+    return () => {
+      clearTimeout(timer);
+    }
+
+  - Vamos incluir os ícones correspondentes aos tipos de mensagens:
+      import { FiAlertCircle, FiXCircle, FiCheckCircle, FiInfo } from 'react-icons/fi';
+      
+      FiAlertCircle: Alerta
+      FiXCircle: Círculo com X dentro
+      FiCheckCircle: Sucesso
+      FiInfo: Informação
+
+  - Criamos uma variável com os tipos de ícones para facilitar e organizar:
+      const icons = {
+        info: <FiInfo size={24} />,
+        error: <FiAlertCircle size={24} />,
+        success: <FiCheckCircle size={24} />
+      }
+
+  Faremos a verificação para sabermos qual ícone apresentar:
+    Substituiremos <FiAlertCircle size={20} /> por:
+      {icons[message.type || 'info']}
+
+  Assim será mostrado o ícone correspondente ao seu tipo ou info por default.
