@@ -2990,3 +2990,8 @@ Quando utilizamos o react-spring não podemos utilizar essas animações em elem
 
     export const Container = styled(animated.div)<ContainerProps>`
 
+
+************
+Em alguns casos pode ser preciso fazer assim. Normalmente é quando react-spring foi instalado em uma outra pasta do projeto:
+  export const Container = animated(styled.div<ContainerProps>`...)
+************
